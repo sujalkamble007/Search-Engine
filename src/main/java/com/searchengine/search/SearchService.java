@@ -7,6 +7,7 @@ import com.searchengine.repository.DocumentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashMap;
 import java.util.List;
@@ -30,6 +31,7 @@ public class SearchService {
     /**
      * Search for documents matching the query with pagination
      */
+    @Transactional
     @Cacheable(value = "searchCache", key = "#query + '-' + #page + '-' + #size")
     public Map<String, Object> search(String query, int page, int size) {
         if (query == null || query.trim().isEmpty()) {

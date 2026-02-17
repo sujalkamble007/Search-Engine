@@ -5,6 +5,7 @@ import com.searchengine.repository.DocumentRepository;
 import com.searchengine.repository.InvertedIndexRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashMap;
 import java.util.List;
@@ -12,6 +13,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Component
+@Transactional(readOnly = true)
 public class BM25Scorer {
     
     // BM25 parameters
