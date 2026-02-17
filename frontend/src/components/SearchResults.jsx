@@ -1,87 +1,91 @@
 export default function SearchResults({ results, onResultClick, query }) {
-  if (!results || results.length === 0) {
-    return null;
-  }
+  if (!results || results.length === 0) return null;
 
-  // Highlight matching terms in text
-  const highlightText = (text, searchQuery) => {
-    if (!text || !searchQuery) return text;
-    
-    const terms = searchQuery.toLowerCase().split(/\s+/).filter(t => t.length > 2);
-    if (terms.length === 0) return text;
-    
-    const regex = new RegExp(`(${terms.join('|')})`, 'gi');
-    const parts = text.split(regex);
-    
-    return parts.map((part, i) => 
-      terms.some(term => part.toLowerCase() === term) ? (
-        <mark key={i} className="bg-yellow-200 px-0.5 rounded">{part}</mark>
+  const highlightText = (text, q) => {
+    if (!text || !q) return text;
+    const terms = q.toLowerCase().split(/\s+/).filter((t) => t.length > 2);
+    if (!terms.length) return text;
+    const escaped = terms.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    const regex = new RegExp(`(${escaped.join("|")})`, "gi");
+    return text.split(regex).map((part, i) =>
+      terms.some((t) => part.toLowerCase() === t) ? (
+        <strong key={i} className="font-bold">{part}</strong>
       ) : (
         part
       )
     );
   };
 
-  // Truncate text with ellipsis
-  const truncate = (text, maxLength = 200) => {
-    if (!text) return "";
-    if (text.length <= maxLength) return text;
-    return text.substring(0, maxLength).trim() + "...";
-  };
+  const truncate = (t, max = 260) =>
+    !t ? "" : t.length <= max ? t : t.substring(0, max).trim() + " ...";
 
-  // Format URL for display
-  const formatUrl = (url) => {
+  const getBreadcrumb = (url) => {
     try {
-      const urlObj = new URL(url);
-      return urlObj.hostname + urlObj.pathname;
+      const u = new URL(url);
+      const parts = [
+        u.hostname,
+        ...u.pathname.split("/").filter(Boolean).map((p) =>
+          decodeURIComponent(p).replace(/_/g, " ")
+        ),
+      ];
+      return parts;
     } catch {
-      return url;
+      return [url];
     }
   };
 
   return (
-    <div className="mt-6 space-y-4">
-      {results.map((doc) => (
-        <article
-          key={doc.id}
-          onClick={() => onResultClick(doc)}
-          className="p-5 bg-white rounded-xl shadow-sm hover:shadow-md 
-                     cursor-pointer transition-all duration-200 border border-gray-100
-                     hover:border-blue-200 group"
-        >
-          {/* URL */}
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-4 h-4 rounded-full bg-green-100 flex items-center justify-center">
-              <div className="w-2 h-2 rounded-full bg-green-500"></div>
+    <div className="space-y-7 fade-in">
+      {results.map((doc) => {
+        const crumbs = getBreadcrumb(doc.url);
+        const isWiki = doc.url?.includes("wikipedia.org");
+
+        return (
+          <article
+            key={doc.id}
+            className="result-link group cursor-pointer max-w-[600px]"
+            onClick={() => onResultClick(doc)}
+          >
+            {/* Breadcrumb URL */}
+            <div className="flex items-center gap-1.5 mb-0.5">
+              {isWiki ? (
+                <img
+                  src="https://en.wikipedia.org/static/favicon/wikipedia.ico"
+                  className="w-7 h-7 rounded-full bg-white p-0.5 border border-gray-100"
+                  alt=""
+                />
+              ) : (
+                <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-500">
+                  {crumbs[0]?.[0]?.toUpperCase() || "?"}
+                </div>
+              )}
+              <div className="text-sm text-gray-700 truncate">
+                {crumbs.map((c, i) => (
+                  <span key={i}>
+                    {i > 0 && <span className="mx-1 text-gray-400">›</span>}
+                    {c}
+                  </span>
+                ))}
+              </div>
             </div>
-            <p className="text-sm text-green-700 truncate max-w-md">
-              {formatUrl(doc.url)}
+
+            {/* Title */}
+            <h3 className="text-xl leading-snug text-[#1a0dab] group-hover:underline decoration-2 underline-offset-2 mb-0.5">
+              {doc.title || "Untitled"}
+            </h3>
+
+            {/* Snippet */}
+            <p className="text-sm text-[#4d5156] leading-[1.58] line-clamp-3">
+              {doc.wordCount > 0 && (
+                <span className="text-gray-500 mr-1">
+                  {doc.wordCount.toLocaleString()} words —
+                </span>
+              )}
+              {highlightText(truncate(doc.rawContent, 300), query)}
             </p>
-          </div>
-
-          {/* Title */}
-          <h2 className="text-lg font-semibold text-blue-700 group-hover:underline 
-                         decoration-2 underline-offset-2 mb-2 line-clamp-2">
-            {doc.title || "Untitled Page"}
-          </h2>
-
-          {/* Content Preview */}
-          <p className="text-sm text-gray-600 leading-relaxed line-clamp-3">
-            {highlightText(truncate(doc.rawContent, 250), query)}
-          </p>
-
-          {/* Metadata */}
-          {doc.crawledAt && (
-            <p className="text-xs text-gray-400 mt-3 flex items-center gap-1">
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Indexed: {new Date(doc.crawledAt).toLocaleDateString()}
-            </p>
-          )}
-        </article>
-      ))}
+          </article>
+        );
+      })}
     </div>
   );
 }

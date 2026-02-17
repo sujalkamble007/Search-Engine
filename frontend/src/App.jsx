@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useCallback } from "react";
 import SearchBar from "./components/SearchBar";
 import SearchResults from "./components/SearchResults";
+import KnowledgePanel from "./components/KnowledgePanel";
 import Pagination from "./components/Pagination";
 import AnalyticsDashboard from "./components/AnalyticsDashboard";
 import CrawlerPanel from "./components/CrawlerPanel";
-import { search, logClick, healthCheck } from "./api/searchApi";
+import { search, logClick } from "./api/searchApi";
 
 export default function App() {
   const [query, setQuery] = useState("");
@@ -14,301 +15,359 @@ export default function App() {
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
-  const [view, setView] = useState("search"); // "search" | "analytics" | "crawler"
-  const [apiStatus, setApiStatus] = useState("checking"); // "checking" | "online" | "offline"
-  const [searchSource, setSearchSource] = useState("wiki"); // "local" | "wiki" | "all"
+  const [searchTime, setSearchTime] = useState(0);
+  const [searchSource, setSearchSource] = useState("wiki");
+  const [showSettings, setShowSettings] = useState(false);
+  const [settingsView, setSettingsView] = useState(null);
 
-  // Check API health on mount
-  useEffect(() => {
-    const checkHealth = async () => {
+  const handleSearch = useCallback(
+    async (q, p = 0, sourceOverride) => {
+      if (!q.trim()) return;
+      const src = sourceOverride || searchSource;
+
+      setLoading(true);
+      setQuery(q);
+      setPage(p);
+      setSearched(true);
+      setShowSettings(false);
+
+      const t0 = performance.now();
       try {
-        await healthCheck();
-        setApiStatus("online");
-      } catch {
-        setApiStatus("offline");
+        const { data } = await search(q, p, 10, src);
+        setSearchTime(((performance.now() - t0) / 1000).toFixed(2));
+        setResults(data.results || []);
+        setTotalPages(data.totalPages || 0);
+        setTotalHits(data.totalHits || 0);
+      } catch (err) {
+        console.error("Search error:", err);
+        setResults([]);
+        setTotalPages(0);
+        setTotalHits(0);
+      } finally {
+        setLoading(false);
       }
-    };
-    checkHealth();
-  }, []);
-
-  const handleSearch = async (q, p = 0) => {
-    if (!q.trim()) return;
-    
-    setLoading(true);
-    setQuery(q);
-    setPage(p);
-    setSearched(true);
-
-    try {
-      const { data } = await search(q, p, 10, searchSource);
-      setResults(data.results || []);
-      setTotalPages(data.totalPages || 0);
-      setTotalHits(data.totalHits || 0);
-    } catch (error) {
-      console.error("Search error:", error);
-      setResults([]);
-      setTotalPages(0);
-      setTotalHits(0);
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+    [searchSource]
+  );
 
   const handleResultClick = (doc) => {
-    // Log the click for analytics
-    logClick(query).catch(console.error);
-    // Open the URL in a new tab
+    logClick(query).catch(() => {});
     window.open(doc.url, "_blank", "noopener,noreferrer");
   };
 
-  const handlePageChange = (newPage) => {
-    handleSearch(query, newPage);
-    // Scroll to top of results
+  const handlePageChange = (p) => {
+    handleSearch(query, p);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
-      {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex justify-between items-center">
-          <button 
-            onClick={() => {
-              setView("search");
-              setSearched(false);
-              setQuery("");
-              setResults([]);
-            }}
-            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+  const goHome = () => {
+    setSearched(false);
+    setQuery("");
+    setResults([]);
+    setTotalHits(0);
+    setShowSettings(false);
+    setSettingsView(null);
+  };
+
+  // ───────────── LOGO COMPONENT ─────────────
+  const Logo = ({ size = "text-2xl" }) => (
+    <button onClick={goHome} className={`${size} font-bold tracking-tight select-none`}>
+      <span className="text-[#4285f4]">M</span>
+      <span className="text-[#ea4335]">y</span>
+      <span className="text-[#fbbc05]">S</span>
+      <span className="text-[#4285f4]">e</span>
+      <span className="text-[#34a853]">a</span>
+      <span className="text-[#ea4335]">r</span>
+      <span className="text-[#4285f4]">c</span>
+      <span className="text-[#fbbc05]">h</span>
+    </button>
+  );
+
+  // ═══════════════════════════════════════════
+  //   HOME PAGE — Google-like centered search
+  // ═══════════════════════════════════════════
+  if (!searched && !showSettings) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        {/* Top-right nav */}
+        <div className="flex justify-end items-center gap-3 px-4 py-3 text-sm">
+          <button
+            onClick={() => { setShowSettings(true); setSettingsView("crawler"); }}
+            className="text-gray-700 hover:underline"
           >
-            <span className="text-3xl">🔍</span>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 
-                           bg-clip-text text-transparent">
-              MySearch
-            </h1>
+            Web Crawler
           </button>
+          <button
+            onClick={() => { setShowSettings(true); setSettingsView("analytics"); }}
+            className="text-gray-700 hover:underline"
+          >
+            Analytics
+          </button>
+          <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-medium text-sm">
+            S
+          </div>
+        </div>
 
-          <div className="flex items-center gap-4">
-            {/* API Status Indicator */}
-            <div className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full
-              ${apiStatus === "online" 
-                ? "bg-green-100 text-green-700" 
-                : apiStatus === "offline" 
-                  ? "bg-red-100 text-red-700"
-                  : "bg-yellow-100 text-yellow-700"
-              }`}>
-              <div className={`w-2 h-2 rounded-full ${
-                apiStatus === "online" 
-                  ? "bg-green-500" 
-                  : apiStatus === "offline" 
-                    ? "bg-red-500"
-                    : "bg-yellow-500 animate-pulse"
-              }`}></div>
-              {apiStatus === "online" ? "API Online" : 
-               apiStatus === "offline" ? "API Offline" : "Checking..."}
-            </div>
+        {/* Centered content */}
+        <div className="flex-1 flex flex-col items-center pt-[22vh]">
+          {/* Logo */}
+          <Logo size="text-[88px]" />
 
-            {/* Navigation */}
-            <nav className="flex gap-2">
-              <NavButton 
-                active={view === "search"} 
-                onClick={() => setView("search")}
-                icon={
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                }
+          {/* Search Bar */}
+          <div className="w-full max-w-[584px] mt-8 px-4">
+            <SearchBar onSearch={handleSearch} initialQuery="" isHome />
+          </div>
+
+          {/* Source pills */}
+          <div className="flex justify-center gap-2 mt-7">
+            {[
+              { key: "wiki", label: "🌐 Wikipedia" },
+              { key: "local", label: "💾 Local Index" },
+              { key: "all", label: "🔍 All Sources" },
+            ].map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => setSearchSource(key)}
+                className={`px-4 py-2 rounded-full text-sm transition-all border
+                  ${searchSource === key
+                    ? "bg-[#d2e3fc] border-[#d2e3fc] text-[#174ea6] font-medium"
+                    : "bg-gray-50 border-gray-200 text-gray-600 hover:border-gray-300 hover:shadow-sm"
+                  }`}
               >
-                Search
-              </NavButton>
-              <NavButton 
-                active={view === "analytics"} 
-                onClick={() => setView("analytics")}
-                icon={
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                          d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
-                }
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* Buttons */}
+          <div className="flex justify-center gap-3 mt-8">
+            <button
+              onClick={() => query && handleSearch(query)}
+              className="px-5 py-2 bg-[#f8f9fa] text-sm text-gray-700 rounded
+                         border border-[#f8f9fa] hover:border-gray-300 hover:shadow-sm transition-all"
+            >
+              MySearch Search
+            </button>
+            <button
+              onClick={() =>
+                window.open("https://en.wikipedia.org/wiki/Special:Random", "_blank")
+              }
+              className="px-5 py-2 bg-[#f8f9fa] text-sm text-gray-700 rounded
+                         border border-[#f8f9fa] hover:border-gray-300 hover:shadow-sm transition-all"
+            >
+              I'm Feeling Lucky
+            </button>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <footer className="bg-[#f2f2f2] border-t border-gray-200 text-sm text-gray-600">
+          <div className="px-6 py-3 border-b border-gray-300">India</div>
+          <div className="px-6 py-3 flex flex-col sm:flex-row justify-between gap-2">
+            <div className="flex gap-6">
+              <span>Built with Spring Boot & React</span>
+            </div>
+            <div className="flex gap-6">
+              <button
+                onClick={() => { setShowSettings(true); setSettingsView("analytics"); }}
+                className="hover:underline"
               >
                 Analytics
-              </NavButton>
-              <NavButton 
-                active={view === "crawler"} 
-                onClick={() => setView("crawler")}
-                icon={
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                          d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                }
+              </button>
+              <button
+                onClick={() => { setShowSettings(true); setSettingsView("crawler"); }}
+                className="hover:underline"
               >
                 Crawler
-              </NavButton>
-            </nav>
+              </button>
+            </div>
           </div>
+        </footer>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════
+  //   SETTINGS PAGE (Analytics / Crawler)
+  // ═══════════════════════════════════════════
+  if (showSettings) {
+    return (
+      <div className="min-h-screen bg-white">
+        <header className="border-b border-gray-200 px-6 py-3 flex items-center gap-6">
+          <Logo />
+          <div className="flex gap-1">
+            {[
+              { key: "analytics", label: "📊 Analytics" },
+              { key: "crawler", label: "🕷️ Web Crawler" },
+            ].map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => setSettingsView(key)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors
+                  ${settingsView === key
+                    ? "bg-blue-50 text-blue-700"
+                    : "text-gray-600 hover:bg-gray-50"
+                  }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </header>
+        <main className="max-w-4xl mx-auto py-6 px-6">
+          {settingsView === "analytics" && <AnalyticsDashboard />}
+          {settingsView === "crawler" && <CrawlerPanel />}
+        </main>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════
+  //   RESULTS PAGE — Google-like layout
+  // ═══════════════════════════════════════════
+  return (
+    <div className="min-h-screen bg-white">
+      {/* ─── Header ─── */}
+      <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
+        <div className="flex items-center gap-5 px-5 py-3">
+          <Logo />
+          <div className="flex-1 max-w-2xl">
+            <SearchBar onSearch={handleSearch} initialQuery={query} isHome={false} />
+          </div>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <button
+              onClick={() => { setShowSettings(true); setSettingsView("analytics"); }}
+              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+              title="Analytics"
+            >
+              <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                      d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </button>
+            <button
+              onClick={() => { setShowSettings(true); setSettingsView("crawler"); }}
+              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+              title="Web Crawler"
+            >
+              <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                      d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-1 px-[166px]">
+          {[
+            { key: "wiki", label: "All" },
+            { key: "local", label: "Local Index" },
+          ].map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => {
+                setSearchSource(key);
+                handleSearch(query, 0, key);
+              }}
+              className={`flex items-center gap-1.5 px-3 pb-3 pt-1 text-sm border-b-[3px] transition-colors
+                ${searchSource === key
+                  ? "border-[#1a73e8] text-[#1a73e8]"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
+            >
+              {key === "wiki" && (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              )}
+              {key === "local" && (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+                </svg>
+              )}
+              {label}
+            </button>
+          ))}
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="max-w-3xl mx-auto px-4 py-6">
-        {view === "search" && (
-          <>
-            {/* Hero Section (shown when no search yet) */}
-            {!searched && (
-              <div className="text-center py-12">
-                <h2 className="text-4xl font-bold text-gray-800 mb-4">
-                  Search the Web
-                </h2>
-                <p className="text-lg text-gray-600 mb-8">
-                  Find what you're looking for with our powerful search engine
-                </p>
-              </div>
-            )}
+      {/* ─── Main ─── */}
+      <main className="max-w-[1200px] mx-auto px-5 pt-5 pb-10">
+        {/* Stats */}
+        {!loading && totalHits > 0 && (
+          <p className="text-sm text-gray-500 mb-4 pl-[146px]">
+            About {totalHits.toLocaleString()} results ({searchTime} seconds)
+          </p>
+        )}
 
-            {/* Search Bar */}
-            <SearchBar onSearch={handleSearch} initialQuery={query} />
-
-            {/* Source Toggle */}
-            <div className="flex items-center justify-center gap-2 mt-4">
-              <span className="text-xs text-gray-500 font-medium">Search from:</span>
-              {[{key: "wiki", label: "🌐 Wikipedia", color: "blue"}, 
-                {key: "local", label: "💾 Local DB", color: "green"}, 
-                {key: "all", label: "🔍 All", color: "purple"}].map(({key, label, color}) => (
-                <button
-                  key={key}
-                  onClick={() => {
-                    setSearchSource(key);
-                    if (query) handleSearch(query, 0);
-                  }}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all
-                    ${searchSource === key
-                      ? `bg-${color}-600 text-white shadow-md`
-                      : `bg-gray-100 text-gray-600 hover:bg-gray-200`
-                    }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-
-            {/* Loading State */}
-            {loading && (
-              <div className="flex flex-col items-center justify-center py-16">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-                <p className="mt-4 text-gray-500">Searching...</p>
-              </div>
-            )}
-
-            {/* Results Header */}
-            {!loading && searched && (
-              <div className="mt-6 flex items-center justify-between">
-                <p className="text-sm text-gray-500">
-                  {totalHits > 0 
-                    ? `Found ${totalHits.toLocaleString()} result${totalHits !== 1 ? 's' : ''} for "${query}"`
-                    : `No results found for "${query}"`
-                  }
-                  {totalHits > 0 && (
-                    <span className={`ml-2 text-xs px-2 py-0.5 rounded-full ${
-                      searchSource === "wiki" ? "bg-blue-100 text-blue-700" :
-                      searchSource === "local" ? "bg-green-100 text-green-700" :
-                      "bg-purple-100 text-purple-700"
-                    }`}>
-                      {searchSource === "wiki" ? "Wikipedia" : searchSource === "local" ? "Local DB" : "All Sources"}
-                    </span>
-                  )}
-                </p>
-                {totalHits > 0 && (
-                  <p className="text-sm text-gray-400">
-                    Page {page + 1} of {totalPages}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Search Results */}
-            {!loading && (
-              <SearchResults 
-                results={results} 
+        {loading ? (
+          <div className="flex items-center gap-3 py-16 pl-[146px]">
+            <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full" />
+            <span className="text-gray-500">Searching…</span>
+          </div>
+        ) : (
+          <div className="flex gap-14">
+            {/* ─── Results column ─── */}
+            <div className="flex-1 pl-[146px] min-w-0">
+              <SearchResults
+                results={results}
                 onResultClick={handleResultClick}
                 query={query}
               />
-            )}
 
-            {/* No Results Message */}
-            {!loading && searched && results.length === 0 && (
-              <div className="text-center py-16">
-                <div className="text-6xl mb-4">🔍</div>
-                <h3 className="text-xl font-semibold text-gray-700 mb-2">
-                  No results found
-                </h3>
-                <p className="text-gray-500 mb-6">
-                  {searchSource === "local" 
-                    ? "No local results. Try searching Wikipedia instead!"
-                    : "Try different keywords or crawl some websites first"}
-                </p>
-                <div className="flex gap-3 justify-center">
-                  {searchSource === "local" && (
-                    <button
-                      onClick={() => { setSearchSource("wiki"); handleSearch(query, 0); }}
-                      className="px-6 py-2 bg-blue-600 text-white rounded-lg 
-                                 hover:bg-blue-700 transition-colors"
-                    >
-                      🌐 Search Wikipedia
-                    </button>
-                  )}
-                  <button
-                    onClick={() => setView("crawler")}
-                    className="px-6 py-2 bg-purple-600 text-white rounded-lg 
-                               hover:bg-purple-700 transition-colors"
-                  >
-                    Add Websites to Index
-                  </button>
+              {/* No results */}
+              {searched && results.length === 0 && (
+                <div className="py-10">
+                  <p className="text-gray-800 mb-2">
+                    Your search – <strong>{query}</strong> – did not match any
+                    documents.
+                  </p>
+                  <p className="text-sm text-gray-500 mt-4 mb-2">Suggestions:</p>
+                  <ul className="text-sm text-gray-500 list-disc pl-5 space-y-1">
+                    <li>Make sure all words are spelled correctly.</li>
+                    <li>Try different keywords.</li>
+                    <li>Try more general keywords.</li>
+                    {searchSource === "local" && (
+                      <li>
+                        <button
+                          onClick={() => {
+                            setSearchSource("wiki");
+                            handleSearch(query, 0, "wiki");
+                          }}
+                          className="text-blue-600 hover:underline"
+                        >
+                          Search Wikipedia instead
+                        </button>
+                      </li>
+                    )}
+                  </ul>
                 </div>
+              )}
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="mt-10">
+                  <Pagination
+                    page={page}
+                    totalPages={totalPages}
+                    onPageChange={handlePageChange}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* ─── Knowledge Panel (right) ─── */}
+            {page === 0 && query && searchSource !== "local" && (
+              <div className="hidden xl:block w-[360px] flex-shrink-0 pt-1">
+                <KnowledgePanel query={query} />
               </div>
             )}
-
-            {/* Pagination */}
-            {!loading && totalPages > 1 && (
-              <Pagination
-                page={page}
-                totalPages={totalPages}
-                onPageChange={handlePageChange}
-              />
-            )}
-          </>
+          </div>
         )}
-
-        {view === "analytics" && <AnalyticsDashboard />}
-        
-        {view === "crawler" && <CrawlerPanel />}
       </main>
-
-      {/* Footer */}
-      <footer className="mt-auto py-6 text-center text-sm text-gray-400">
-        <p>MySearch Engine © {new Date().getFullYear()}</p>
-        <p className="mt-1">
-          Built with Spring Boot, React & Tailwind CSS
-        </p>
-      </footer>
     </div>
-  );
-}
-
-function NavButton({ children, active, onClick, icon }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium 
-                  transition-all duration-200
-        ${active 
-          ? "bg-blue-600 text-white shadow-md" 
-          : "text-gray-600 hover:bg-gray-100"
-        }`}
-    >
-      {icon}
-      {children}
-    </button>
   );
 }

@@ -243,6 +243,50 @@ public class WikipediaService {
     }
 
     /**
+     * Get autocomplete suggestions from Wikipedia using OpenSearch API.
+     * Returns list of {title, description, url}.
+     */
+    public List<Map<String, String>> opensearch(String query, int limit) {
+        try {
+            String encoded = URLEncoder.encode(query, StandardCharsets.UTF_8);
+            String url = WIKI_API + "?action=opensearch&search=" + encoded
+                    + "&limit=" + limit + "&namespace=0&format=json";
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .header("User-Agent", "SearchEngine/1.0")
+                    .timeout(Duration.ofSeconds(5))
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            JsonNode root = objectMapper.readTree(response.body());
+
+            List<Map<String, String>> results = new ArrayList<>();
+            JsonNode titles = root.get(1);
+            JsonNode descriptions = root.get(2);
+            JsonNode urls = root.get(3);
+
+            if (titles != null) {
+                for (int i = 0; i < titles.size(); i++) {
+                    Map<String, String> item = new LinkedHashMap<>();
+                    item.put("title", titles.get(i).asText());
+                    item.put("description", descriptions != null && i < descriptions.size()
+                            ? descriptions.get(i).asText() : "");
+                    item.put("url", urls != null && i < urls.size()
+                            ? urls.get(i).asText() : "");
+                    results.add(item);
+                }
+            }
+
+            return results;
+        } catch (Exception e) {
+            log.error("Wikipedia opensearch failed: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    /**
      * Strip HTML tags from Wikipedia snippets.
      */
     private String cleanHtml(String html) {

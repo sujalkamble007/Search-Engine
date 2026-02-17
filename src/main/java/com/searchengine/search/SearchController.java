@@ -52,11 +52,24 @@ public class SearchController {
 
     /**
      * GET /api/autocomplete?prefix=jav
-     * Trie-based autocomplete suggestions
+     * Returns local Trie suggestions + Wikipedia opensearch suggestions
      */
     @GetMapping("/autocomplete")
-    public ResponseEntity<List<String>> autocomplete(@RequestParam String prefix) {
-        return ResponseEntity.ok(autocompleteService.getSuggestions(prefix));
+    public ResponseEntity<Map<String, Object>> autocomplete(@RequestParam String prefix) {
+        List<String> local = autocompleteService.getSuggestions(prefix);
+        List<Map<String, String>> wiki = prefix.length() >= 2
+                ? wikipediaService.opensearch(prefix, 5) : List.of();
+        return ResponseEntity.ok(Map.of("local", local, "wiki", wiki));
+    }
+
+    /**
+     * GET /api/knowledge?q=java
+     * Returns Wikipedia article summary for knowledge panel
+     */
+    @GetMapping("/knowledge")
+    public ResponseEntity<Map<String, Object>> knowledgePanel(@RequestParam String q) {
+        Map<String, Object> summary = wikipediaService.getArticleSummary(q);
+        return ResponseEntity.ok(summary);
     }
 
     /**
