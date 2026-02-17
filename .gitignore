@@ -35,3 +35,33 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### OS ###
+.DS_Store
+Thumbs.db
+
+### Logs ###
+*.log
+logs/
+app.log
+nohup.out
+
+### Environment ###
+.env
+.env.local
+.env.*.local
+
+### Node ###
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+### Database ###
+*.db
+*.h2.db
+
+### Temp ###
+tmp/
+temp/
+*.tmp
