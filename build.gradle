@@ -1,0 +1,53 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '3.4.1'
+	id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.searchengine'
+version = '0.0.1-SNAPSHOT'
+description = 'Full-Stack Java Search Engine on AWS'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	// Core Spring Boot
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	
+	// PostgreSQL Driver
+	runtimeOnly 'org.postgresql:postgresql'
+	
+	// H2 Database for local development
+	runtimeOnly 'com.h2database:h2'
+	
+	// Redis Cache
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+	implementation 'org.springframework.boot:spring-boot-starter-cache'
+	
+	// Jsoup Web Crawler
+	implementation 'org.jsoup:jsoup:1.17.2'
+	
+	// AWS S3 SDK
+	implementation 'software.amazon.awssdk:s3:2.25.0'
+	
+	// Lombok (reduces boilerplate)
+	compileOnly 'org.projectlombok:lombok'
+	annotationProcessor 'org.projectlombok:lombok'
+	
+	// Test dependencies
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
