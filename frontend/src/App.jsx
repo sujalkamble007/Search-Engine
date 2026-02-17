@@ -16,6 +16,7 @@ export default function App() {
   const [searched, setSearched] = useState(false);
   const [view, setView] = useState("search"); // "search" | "analytics" | "crawler"
   const [apiStatus, setApiStatus] = useState("checking"); // "checking" | "online" | "offline"
+  const [searchSource, setSearchSource] = useState("wiki"); // "local" | "wiki" | "all"
 
   // Check API health on mount
   useEffect(() => {
@@ -39,7 +40,7 @@ export default function App() {
     setSearched(true);
 
     try {
-      const { data } = await search(q, p);
+      const { data } = await search(q, p, 10, searchSource);
       setResults(data.results || []);
       setTotalPages(data.totalPages || 0);
       setTotalHits(data.totalHits || 0);
@@ -169,6 +170,29 @@ export default function App() {
             {/* Search Bar */}
             <SearchBar onSearch={handleSearch} initialQuery={query} />
 
+            {/* Source Toggle */}
+            <div className="flex items-center justify-center gap-2 mt-4">
+              <span className="text-xs text-gray-500 font-medium">Search from:</span>
+              {[{key: "wiki", label: "🌐 Wikipedia", color: "blue"}, 
+                {key: "local", label: "💾 Local DB", color: "green"}, 
+                {key: "all", label: "🔍 All", color: "purple"}].map(({key, label, color}) => (
+                <button
+                  key={key}
+                  onClick={() => {
+                    setSearchSource(key);
+                    if (query) handleSearch(query, 0);
+                  }}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all
+                    ${searchSource === key
+                      ? `bg-${color}-600 text-white shadow-md`
+                      : `bg-gray-100 text-gray-600 hover:bg-gray-200`
+                    }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
             {/* Loading State */}
             {loading && (
               <div className="flex flex-col items-center justify-center py-16">
@@ -185,6 +209,15 @@ export default function App() {
                     ? `Found ${totalHits.toLocaleString()} result${totalHits !== 1 ? 's' : ''} for "${query}"`
                     : `No results found for "${query}"`
                   }
+                  {totalHits > 0 && (
+                    <span className={`ml-2 text-xs px-2 py-0.5 rounded-full ${
+                      searchSource === "wiki" ? "bg-blue-100 text-blue-700" :
+                      searchSource === "local" ? "bg-green-100 text-green-700" :
+                      "bg-purple-100 text-purple-700"
+                    }`}>
+                      {searchSource === "wiki" ? "Wikipedia" : searchSource === "local" ? "Local DB" : "All Sources"}
+                    </span>
+                  )}
                 </p>
                 {totalHits > 0 && (
                   <p className="text-sm text-gray-400">
@@ -211,15 +244,28 @@ export default function App() {
                   No results found
                 </h3>
                 <p className="text-gray-500 mb-6">
-                  Try different keywords or crawl some websites first
+                  {searchSource === "local" 
+                    ? "No local results. Try searching Wikipedia instead!"
+                    : "Try different keywords or crawl some websites first"}
                 </p>
-                <button
-                  onClick={() => setView("crawler")}
-                  className="px-6 py-2 bg-purple-600 text-white rounded-lg 
-                             hover:bg-purple-700 transition-colors"
-                >
-                  Add Websites to Index
-                </button>
+                <div className="flex gap-3 justify-center">
+                  {searchSource === "local" && (
+                    <button
+                      onClick={() => { setSearchSource("wiki"); handleSearch(query, 0); }}
+                      className="px-6 py-2 bg-blue-600 text-white rounded-lg 
+                                 hover:bg-blue-700 transition-colors"
+                    >
+                      🌐 Search Wikipedia
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setView("crawler")}
+                    className="px-6 py-2 bg-purple-600 text-white rounded-lg 
+                               hover:bg-purple-700 transition-colors"
+                  >
+                    Add Websites to Index
+                  </button>
+                </div>
               </div>
             )}
 

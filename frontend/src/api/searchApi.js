@@ -13,9 +13,10 @@ const api = axios.create({
  * @param {string} q - Search query
  * @param {number} page - Page number (0-indexed)
  * @param {number} size - Results per page
+ * @param {string} source - "local" | "wiki" | "all"
  */
-export const search = (q, page = 0, size = 10) =>
-  api.get("/search", { params: { q, page, size } });
+export const search = (q, page = 0, size = 10, source = "all") =>
+  api.get("/search", { params: { q, page, size, source } });
 
 /**
  * Get autocomplete suggestions
@@ -43,6 +44,22 @@ export const getAnalytics = () => api.get("/analytics");
  */
 export const startCrawl = (url, domain) =>
   api.post("/crawl", null, { params: { url, domain } });
+
+/**
+ * Search Wikipedia directly
+ * @param {string} q - Search query
+ * @param {number} page - Page number
+ * @param {number} size - Results per page
+ */
+export const searchWiki = (q, page = 0, size = 10) =>
+  api.get("/wiki/search", { params: { q, page, size } });
+
+/**
+ * Get Wikipedia article summary
+ * @param {string} title - Article title
+ */
+export const getWikiSummary = (title) =>
+  api.get("/wiki/summary", { params: { title } });
 
 /**
  * Health check

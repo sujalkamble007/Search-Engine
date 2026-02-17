@@ -1,5 +1,11 @@
 package com.searchengine.autocomplete;
 
+import com.searchengine.repository.DocumentRepository;
+import com.searchengine.repository.SearchQueryRepository;
+import jakarta.annotation.PostConstruct;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -7,8 +13,55 @@ import java.util.List;
 
 @Service
 public class AutocompleteService {
+
+    private static final Logger log = LoggerFactory.getLogger(AutocompleteService.class);
     
     private final TrieNode root = new TrieNode();
+    private int wordCount = 0;
+
+    @Autowired
+    private DocumentRepository documentRepository;
+
+    @Autowired
+    private SearchQueryRepository searchQueryRepository;
+
+    /**
+     * Load existing tokens from the database into the Trie on startup.
+     * This ensures autocomplete works after server restarts with PostgreSQL.
+     */
+    @PostConstruct
+    public void loadFromDatabase() {
+        log.info("Loading autocomplete data from database...");
+
+        // Load all past search queries (highest priority)
+        try {
+            searchQueryRepository.findAll().forEach(sq -> insert(sq.getQuery()));
+            log.info("Loaded search queries into autocomplete Trie");
+        } catch (Exception e) {
+            log.warn("Could not load search queries: {}", e.getMessage());
+        }
+
+        // Load tokens from all indexed documents
+        try {
+            documentRepository.findAll().forEach(doc -> {
+                if (doc.getTokens() != null && !doc.getTokens().isEmpty()) {
+                    for (String token : doc.getTokens().split("\\s+")) {
+                        if (token.length() >= 3) { // Skip very short tokens
+                            insert(token);
+                        }
+                    }
+                }
+                // Also index document titles
+                if (doc.getTitle() != null && !doc.getTitle().isEmpty()) {
+                    insert(doc.getTitle().toLowerCase().trim());
+                }
+            });
+        } catch (Exception e) {
+            log.warn("Could not load document tokens: {}", e.getMessage());
+        }
+
+        log.info("Autocomplete Trie loaded with {} words", wordCount);
+    }
 
     /**
      * Insert a word into the Trie
@@ -23,7 +76,10 @@ public class AutocompleteService {
             node.children.putIfAbsent(c, new TrieNode());
             node = node.children.get(c);
         }
-        node.isEndOfWord = true;
+        if (!node.isEndOfWord) {
+            node.isEndOfWord = true;
+            wordCount++;
+        }
     }
 
     /**
