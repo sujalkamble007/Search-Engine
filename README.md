@@ -1,1081 +1,721 @@
-# 🔍 MySearch Engine
+<div align="center">
 
-A **production-grade, full-stack search engine** built from scratch with **Java 21 / Spring Boot 3.4** and **React 18**. It features a **unified indexing pipeline** that crawls both websites and Wikipedia articles into a single local database, ranks results with **BM25 relevance scoring**, provides **Trie-based autocomplete**, enriches results with **Wikipedia Knowledge Panels**, tracks real-time analytics, and presents everything in a pixel-perfect Google-inspired UI — all wired together with clean REST APIs and multi-environment configuration.
+# seek.
 
-![Java](https://img.shields.io/badge/Java-21-orange?style=flat-square&logo=openjdk)
-![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.1-green?style=flat-square&logo=springboot)
-![React](https://img.shields.io/badge/React-18-blue?style=flat-square&logo=react)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-3.4-38B2AC?style=flat-square&logo=tailwindcss)
-![Gradle](https://img.shields.io/badge/Gradle-8.x-02303A?style=flat-square&logo=gradle)
-![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)
+### *a search engine, built from scratch.*
+
+> *Ever wondered what happens in the 0.3 seconds between pressing Enter and seeing search results?*
+> *I built an entire search engine to find out.*
+
+<br>
+
+![Java](https://img.shields.io/badge/Java_21-E34F26?style=for-the-badge&logo=openjdk&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring_Boot_3.4-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)
+![React](https://img.shields.io/badge/React_18-61DAFB?style=for-the-badge&logo=react&logoColor=black)
+![Tailwind](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwindcss&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
+![License](https://img.shields.io/badge/MIT-yellow?style=for-the-badge)
+
+<br>
+
+**[The Story](#-the-story)** · **[How It Works](#-how-it-works)** · **[Features](#-features)** · **[Quick Start](#-quick-start)** · **[What I Learned](#-what-i-learned)** · **[API](#-api-reference)** · **[Architecture](#-architecture)**
+
+</div>
+
+---
+
+<br>
+
+## 📖 The Story
+
+We use search engines every day — Google, Bing, DuckDuckGo. We type a few words, hit Enter, and results appear in milliseconds. It feels like magic.
+
+**But it's not magic. It's computer science.**
+
+I wanted to understand *every single step* of that process. Not by reading about it — by building it myself, from the ground up. No Elasticsearch. No Solr. No libraries doing the hard work for me.
+
+**seek.** is the result — a fully functional search engine that:
+- 🕷️ **Crawls** the internet (and Wikipedia) to discover pages
+- 📝 **Processes** raw HTML into clean, searchable text
+- 🗂️ **Indexes** every word so it can be found in milliseconds
+- 🧮 **Ranks** results using the same math that powers Elasticsearch
+- ⌨️ **Autocompletes** your queries as you type
+- 📊 **Tracks** what people search for and click on
+- 🎨 **Displays** everything in a beautiful, hand-crafted UI
+
+Every piece — from the crawler that visits web pages, to the ranking algorithm that decides which result comes first, to the autocomplete that guesses what you're typing — is written by hand.
+
+<br>
 
 ---
 
-## 📋 Table of Contents
+<br>
 
-- [Features](#-features)
-- [Screenshots / UI Overview](#-screenshots--ui-overview)
-- [Architecture](#-architecture)
-  - [High-Level Architecture](#high-level-architecture)
-  - [Data Flow](#data-flow)
-  - [Backend Module Breakdown](#backend-module-breakdown)
-  - [Frontend Component Tree](#frontend-component-tree)
-- [How It Works — Deep Dive](#-how-it-works--deep-dive)
-  - [1. Web Crawling Pipeline](#1-web-crawling-pipeline)
-  - [2. Text Processing & Indexing](#2-text-processing--indexing)
-  - [3. BM25 Search Ranking Algorithm](#3-bm25-search-ranking-algorithm)
-  - [4. Trie Autocomplete](#4-trie-autocomplete)
-  - [5. Wikipedia Crawling & Knowledge Panel](#5-wikipedia-crawling--knowledge-panel)
-  - [6. Analytics Tracking](#6-analytics-tracking)
-  - [7. Caching Strategy](#7-caching-strategy)
-- [Tech Stack](#-tech-stack)
-- [Getting Started](#-getting-started)
-  - [Prerequisites](#prerequisites)
-  - [Installation](#installation)
-  - [Running the Application](#running-the-application)
-  - [Access Points](#access-points)
-- [API Documentation](#-api-documentation)
-  - [Search Endpoint](#search-endpoint)
-  - [Autocomplete Endpoint](#autocomplete-endpoint)
-  - [Knowledge Panel Endpoint](#knowledge-panel-endpoint)
-  - [Crawler Endpoints](#crawler-endpoints)
-  - [Analytics Endpoints](#analytics-endpoints)
-  - [Utility Endpoints](#utility-endpoints)
-- [Project Structure](#-project-structure)
-- [Configuration](#-configuration)
-  - [Environment Profiles](#environment-profiles)
-  - [Environment Variables](#environment-variables)
-  - [Application Properties](#application-properties)
-- [Database Schema](#-database-schema)
-- [Deployment](#-deployment)
-  - [Docker](#docker)
-  - [AWS Architecture](#aws-architecture)
-- [Testing](#-testing)
-- [Contributing](#-contributing)
-- [License](#-license)
-- [Acknowledgments](#-acknowledgments)
+## 🧠 How It Works
+
+*Let's walk through what happens when you search for "machine learning" on seek.*
+
+<br>
+
+### Step 1: You Type → Autocomplete Kicks In
+
+The moment you start typing `"mac..."`, seek. doesn't wait. It runs your partial text through a **Trie** — a tree-shaped data structure where every branch is a letter.
+
+```
+Think of it like a dictionary that instantly flips to the right page.
+
+You type "m" → jump to the M section
+You type "ma" → narrow to MA words
+You type "mac" → suggestions appear: "machine", "machine learning", "macos"
+```
+
+This lookup takes **O(k)** time — where k is just the number of characters you've typed. Whether the dictionary has 100 words or 10 million, it's equally fast.
+
+<br>
+
+### Step 2: You Press Enter → Text Processing
+
+Your query `"machine learning"` goes through a cleaning pipeline:
+
+```
+"Machine  LEARNING!!!" 
+    → lowercase         → "machine  learning!!!"
+    → remove symbols    → "machine  learning"
+    → remove stop words → "machine learning"  (no stop words here)
+    → deduplicate       → ["machine", "learning"]
+```
+
+Stop words are common words like *"the", "is", "in", "a", "and"* — they appear in almost every document, so they're useless for ranking. We filter out **100+ of them**.
+
+<br>
+
+### Step 3: Finding Matching Pages → The Inverted Index
+
+Now we need to find every page that contains "machine" or "learning". Scanning through thousands of full documents would be painfully slow. Instead, we use an **Inverted Index**.
+
+```
+Think of it like the index at the back of a textbook:
+
+  "machine"  → Page 12 (5 times), Page 47 (2 times), Page 103 (8 times)
+  "learning" → Page 12 (3 times), Page 47 (7 times), Page 89 (1 time)
+```
+
+Instead of reading every page to find a word, you look up the word and instantly know every page it appears on — and *how often*. This is how real search engines handle billions of pages.
+
+<br>
+
+### Step 4: Ranking Results → BM25 Algorithm
+
+Finding pages is easy. The hard part is **deciding which page should come first**.
+
+seek. uses **BM25 (Best Match 25)** — the same algorithm that powers Elasticsearch and Apache Lucene (which powers most search engines you've used).
+
+The core idea is beautifully simple:
+
+> **A word that appears frequently in a document but rarely in other documents is a strong signal that the document is relevant.**
+
+The formula balances three things:
+
+| Factor | What It Means | Example |
+|--------|--------------|---------|
+| **TF** (Term Frequency) | How often does the word appear in *this* document? | "machine" appears 8 times → strong signal |
+| **IDF** (Inverse Document Frequency) | How rare is this word across *all* documents? | "machine" appears in 3/1000 docs → very relevant |
+| **Document Length** | Is this document unusually long? | A 10,000-word doc with 8 mentions ≠ a 100-word doc with 8 mentions |
+
+```
+BM25 Score = Σ  IDF(word) × [ freq × (k₁ + 1) ] / [ freq + k₁ × (1 - b + b × docLen/avgLen) ]
+```
+
+Don't worry about the math — what matters is:
+- **Rare words matter more** than common ones (IDF)
+- **Repeated mentions matter**, but with diminishing returns (TF saturation)
+- **Shorter documents** that mention a word are ranked higher than long ones (length normalization)
+
+<br>
+
+### Step 5: Page 1 of Results → The Response
+
+The top-scoring documents are:
+1. **Paginated** — 10 per page
+2. **Enriched** — a Wikipedia Knowledge Panel appears alongside results
+3. **Cached** — so the same search is instant next time
+4. **Logged** — for analytics (what do people search for most?)
+
+Total time: typically **under 300ms**.
+
+<br>
 
 ---
+
+<br>
 
 ## ✨ Features
 
-### 🕷️ Unified Crawler (Websites + Wikipedia)
-- **BFS traversal** starting from any seed URL for website crawling
-- **Wikipedia article crawling** — search a topic and batch-index up to 50 Wikipedia articles into the local database
-- All content (web pages + Wikipedia) goes through the **same indexing pipeline** — tokenized, inverted-indexed, and searchable via one unified `/search` endpoint
-- Domain-boundary enforcement — stays within the target website
-- Configurable crawl delay (default 1 s) and page limit (default 100)
-- Polite crawling with custom `User-Agent` header
-- Automatic link extraction and duplicate URL detection
-- Background crawling via async thread (non-blocking API)
+### 🕷️ Web Crawler
+*Goes to websites, reads them, and brings back the content — like a librarian visiting every library in town.*
 
-### 🔎 Search Engine
-- **BM25 (Okapi) ranking** — the same algorithm used by Elasticsearch and Lucene
-- **Inverted index** — token → {document, frequency} mappings for O(1) token lookups
-- **Text processing pipeline** — lowercase normalization, special-character removal, 100+ stop-word filtering, short-word pruning, deduplication
-- **Paginated results** with total hit counts
-- **Search result caching** using Spring Cache (in-memory or Redis)
-
-### ⌨️ Autocomplete
-- **Trie data structure** with O(k) prefix lookups (k = prefix length)
-- Suggestions come from the **unified local index** — all crawled content (websites + Wikipedia) feeds the Trie
-- Preloaded on startup from database (crawled tokens + past search queries)
-- Keyboard navigation (↑ ↓ Enter Escape) with highlighted active item
-- Debounced API calls (200 ms) to avoid excessive requests
+- **Breadth-First Search** traversal from any starting URL
+- Stays within the target website (won't wander off to unrelated sites)
+- Polite crawling — waits 1 second between requests, identifies itself with a custom User-Agent
+- Automatically discovers and follows links on each page
+- Skips pages it's already visited (no duplicates)
+- Runs in the background — you don't have to wait
 
 ### 🌐 Wikipedia Integration
-- **Crawl & Index** — Wikipedia articles are fetched via the MediaWiki Search API, crawled with Jsoup, and indexed through the same pipeline as regular websites (tokenize → inverted index → Trie → BM25)
-- **Knowledge Panel** — article summaries, descriptions, thumbnail/original images (via Wikipedia REST API) displayed as a sidebar enrichment alongside search results
-- Wikipedia articles appear in search results **alongside web-crawled pages**, ranked together by BM25
+*Search any topic and instantly index dozens of Wikipedia articles into your local search engine.*
+
+- Type "quantum physics" and index 20+ Wikipedia articles in seconds
+- Wikipedia articles are treated exactly like regular web pages — same indexing pipeline, same BM25 ranking
+- **Knowledge Panel** — when you search, a rich Wikipedia summary with image appears alongside results
+- Two Wikipedia APIs working together: one for discovering articles, one for rich summaries
+
+### 🔎 Search Engine
+*The brain — takes your words, finds matching pages, and ranks them by relevance.*
+
+- **BM25 ranking** — the industry-standard algorithm
+- **Inverted index** — O(1) word lookups across the entire database
+- **Text processing** — cleans, normalizes, removes stop words, deduplicates
+- **Pagination** — browse through hundreds of results
+- **Caching** — repeated searches are instant (in-memory or Redis)
+
+### ⌨️ Autocomplete
+*Predicts what you're about to type — before you finish typing it.*
+
+- **Trie data structure** — millisecond prefix lookups
+- Built from all crawled content + past search queries
+- Keyboard navigation (↑ ↓ Enter Escape)
+- Debounced API calls — doesn't spam the server
 
 ### 📊 Analytics Dashboard
-- Track **top 10 most searched queries** (ranked by count)
-- Track **top 10 most clicked results** (ranked by clicks)
-- **Click-through rate (CTR)** calculation
-- Aggregate statistics: total queries, total clicks, unique queries, average CTR
-- Auto-refreshing dashboard (every 30 seconds)
+*See what people are searching for and what they're clicking on.*
 
-### 🎨 Google-Inspired UI
-- **Home page** — centered logo, search bar, "Index New Pages" button
-- **Results page** — sticky header, breadcrumb URLs, highlighted query terms, word count badges
-- **Knowledge Panel** (right sidebar) — Wikipedia thumbnail + summary on first page
-- **Pagination** — Google-style colored "MySearch" letters + numbered page buttons
-- **Responsive design** with Tailwind CSS utility classes
-- Custom scrollbar, shimmer loading skeletons, fade-in animations
-- Visited link color change (`#681da8`)
+- Top 10 most searched queries
+- Top 10 most clicked results
+- Click-through rate (CTR) calculation
+- Auto-refreshes every 30 seconds
+- Aggregate stats: total queries, total clicks, unique queries
 
-### ☁️ Cloud-Ready
-- **AWS S3** optional upload of crawled page content
-- **Redis** cache layer for search results (production profile)
-- **PostgreSQL** for persistent storage (local/prod profiles)
-- **H2 in-memory** database for zero-setup development
-- **HikariCP** connection pooling with tuned settings per environment
+### 🎨 Minimalist UI
+*Hand-crafted design with dark and light themes.*
+
+- **"seek."** — custom branding with serif typography
+- **Dark/Light mode** — auto-detects your OS preference, toggle anytime
+- **Warm, earthy palette** — terracotta accents, cream backgrounds
+- Typography: Instrument Serif (headings) + Inter (body) + JetBrains Mono (code)
+- Smooth page transitions, hover effects, and animations
+- Fully responsive — works on all screen sizes
+
+<br>
 
 ---
 
-## 🖥️ Screenshots / UI Overview
+<br>
 
-| Page | Description |
-|------|-------------|
-| **Home** | Google-style centered layout with colorful "MySearch" logo, search bar, "MySearch Search" and "Index New Pages" action buttons |
-| **Search Results** | Sticky header with search bar, result count with timing, breadcrumb URLs, highlighted keywords, Wikipedia Knowledge Panel sidebar on the right |
-| **Knowledge Panel** | Wikipedia article thumbnail, title, description, expandable extract, and source attribution |
-| **Analytics** | Two-column dashboard: Top Searched Queries (🔥) and Most Clicked Results (👆), plus 4 stat cards (Total Queries, Total Clicks, Unique Queries, Avg CTR) |
-| **Index Pages** | Two panels: (1) Wikipedia article indexer — enter a topic + number of articles; (2) Website crawler — enter seed URL with auto-extracted domain filter |
+## 🚀 Quick Start
+
+### What You Need
+
+| Tool | Version | Why |
+|------|---------|-----|
+| **Java JDK** | 21+ | Backend is written in Java |
+| **Node.js** | 18+ | Frontend needs npm |
+| **Git** | Any | To clone the repo |
+
+That's it. No database setup, no Redis, no Docker. The dev mode uses an in-memory database — it works out of the box.
+
+### 3 Steps to Run
+
+```bash
+# 1. Clone it
+git clone https://github.com/sujalkamble007/Search-Engine.git
+cd Search-Engine
+
+# 2. Start the backend (opens on port 8080)
+./gradlew bootRun
+
+# 3. In a new terminal — start the frontend (opens on port 5173)
+cd frontend && npm install && npm run dev
+```
+
+**Open [http://localhost:5173](http://localhost:5173)** — you're running a search engine.
+
+### First Things to Try
+
+1. Click **"index"** → Enter a Wikipedia topic like `"artificial intelligence"` → Hit **Index Articles**
+2. Go back to the home page → Search for `"artificial intelligence"`
+3. Watch the autocomplete, results, and Knowledge Panel come to life
+4. Click **"analytics"** to see your search history
+
+<br>
 
 ---
 
-## 🏗️ Architecture
+<br>
 
-### High-Level Architecture
+## 🎓 What I Learned
 
-```
-┌──────────────────────┐         ┌──────────────────────┐        ┌─────────────────┐
-│                      │  HTTP   │                      │  JPA   │                 │
-│   React Frontend     │────────▶│   Spring Boot API    │───────▶│  PostgreSQL /   │
-│   (Vite + Tailwind)  │  :5173  │   (REST Controllers) │  :5432 │  H2 Database    │
-│                      │◀────────│                      │◀───────│                 │
-└──────────────────────┘  JSON   └──────────┬───────────┘        └─────────────────┘
-                                            │
-                              ┌─────────────┼──────────────┐
-                              │             │              │
-                              ▼             ▼              ▼
-                    ┌──────────────┐ ┌────────────┐ ┌──────────────┐
-                    │  Redis Cache │ │  AWS S3    │ │  Wikipedia   │
-                    │  (Optional)  │ │ (Optional) │ │  REST API    │
-                    └──────────────┘ └────────────┘ └──────────────┘
-```
+Building a search engine from scratch taught me more than any tutorial ever could. Here are the biggest takeaways:
 
-### Data Flow
+<br>
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│ CRAWLING PIPELINE                                                       │
-│                                                                         │
-│  Seed URL ──▶ BFS Queue ──▶ Jsoup Fetch ──▶ TextProcessor              │
-│                                               │                         │
-│               ┌───────────────────────────────┤                         │
-│               ▼               ▼               ▼              ▼          │
-│          Save Document   Upload to S3   Build Inverted   Feed Trie     │
-│          (PostgreSQL)    (if enabled)   Index entries    (autocomplete) │
-└─────────────────────────────────────────────────────────────────────────┘
+### 1. The Inverted Index Is Everything
+> *The single most important data structure in information retrieval.*
 
-┌─────────────────────────────────────────────────────────────────────────┐
-│ SEARCH PIPELINE                                                         │
-│                                                                         │
-│  User Query ──▶ TextProcessor ──▶ BM25Scorer ──▶ Ranked Doc IDs        │
-│                (clean+tokenize)   (IDF × TF)     │                      │
-│                                                   ▼                     │
-│                                            Paginate ──▶ Fetch Docs      │
-│                                                         ──▶ JSON        │
-│                                                         ──▶ Log Query   │
-└─────────────────────────────────────────────────────────────────────────┘
+Before building this, I thought searching meant "loop through every document and check if the word is there." That's O(n × m) — and it's impossibly slow at scale. The inverted index flips the problem: instead of "for each document, find the words," it's "for each word, here are the documents." This one idea is the foundation of every search engine ever built — from Google to Elasticsearch.
 
-┌─────────────────────────────────────────────────────────────────────────┐
-│ AUTOCOMPLETE PIPELINE                                                   │
-│                                                                         │
-│  Prefix ──▶ Trie DFS (local suggestions, max 10)                       │
-│         ──▶ Return flat list of matching terms                          │
-│  (Trie is populated from all indexed content: websites + Wikipedia)     │
-└─────────────────────────────────────────────────────────────────────────┘
-```
+### 2. BM25 Is Elegant
+> *The math is simple, but the intuition is deep.*
 
-### Backend Module Breakdown
+The IDF component captures something deeply intuitive: if a word appears in almost every document, it's not useful for distinguishing between them. The word "the" appears everywhere — it tells you nothing. But "quantum" appears in 3 out of 10,000 documents? That's a strong signal. BM25 encodes this intuition into a formula that "just works."
 
-| Package | Responsibility |
-|---------|---------------|
-| `model/` | JPA entities: `Document`, `InvertedIndex`, `SearchQuery` |
-| `repository/` | Spring Data JPA interfaces with custom JPQL queries |
-| `config/` | CORS (`WebConfig`), Redis cache (`RedisConfig`), AWS S3 client (`AwsS3Config`) |
-| `crawler/` | `WebCrawler` (BFS engine for websites + Wikipedia article crawler) + `CrawlerService` (page processing orchestrator) |
-| `indexer/` | `TextProcessor` (clean/tokenize/stop-words) + `IndexerService` (inverted index builder) |
-| `search/` | `BM25Scorer` (ranking algorithm) + `SearchService` (orchestration) + `SearchController` (REST API) |
-| `autocomplete/` | `TrieNode` (data structure) + `AutocompleteService` (insert/search/load from DB) |
-| `wikipedia/` | `WikipediaService` (MediaWiki Search API for crawl discovery + REST Summary API for Knowledge Panel) |
-| `analytics/` | `AnalyticsService` (query/click logging) + `AnalyticsController` (REST endpoint) |
+### 3. Data Structures Are Not Abstract
+> *A Trie isn't just a textbook concept — it's why autocomplete feels instant.*
 
-### Frontend Component Tree
+Before this project, data structures felt academic. After implementing a Trie that powers real-time autocomplete with thousands of entries and sub-millisecond lookups, I'll never look at them the same way. The right data structure doesn't just improve performance — it *enables* features that would otherwise be impossible.
 
-```
-App.jsx (state management + routing between 3 views: Home / Results / Settings)
-├── SearchBar.jsx          — Input with autocomplete dropdown from unified local Trie
-├── SearchResults.jsx      — Result cards with breadcrumbs, title highlighting, snippets
-├── KnowledgePanel.jsx     — Wikipedia summary sidebar with image + expandable extract
-├── Pagination.jsx         — Google-style colored page navigation
-├── AnalyticsDashboard.jsx — Top queries + top clicks tables + 4 stat cards (auto-refresh)
-└── CrawlerPanel.jsx       — Two panels: Wikipedia article indexer + Website crawler
-```
+### 4. Crawling Is a Social Contract
+> *The internet works because crawlers follow rules.*
+
+Polite crawling isn't optional — it's fundamental. Rate limiting (1 request/second), domain boundaries, duplicate detection, custom User-Agent headers — these aren't nice-to-haves, they're what separates a good crawler from a DDoS attack. Building a crawler taught me more about internet etiquette than any networking class.
+
+### 5. Caching Changes Everything
+> *The fastest query is the one you don't execute.*
+
+The first search for "java programming" takes 280ms. The second takes 2ms. That's not a small optimization — it's a 140× speedup from a single `@Cacheable` annotation. Understanding when and what to cache (and when to invalidate) is one of the most impactful skills in backend engineering.
+
+### 6. Full-Stack Means Full Responsibility
+> *Every decision in the backend affects the frontend, and vice versa.*
+
+The shape of the API response dictates the React component structure. The database schema determines query performance. The text processing pipeline affects search quality. Building end-to-end forced me to think about the *system*, not just the *code*.
+
+### 7. Simple Beats Complex
+> *The "seek." UI started as a Google clone. It ended as something more honest.*
+
+The final design uses three fonts, two colors, and zero gradients. It's more memorable than any flashy UI because it has a *point of view*. The same lesson applies to code: the BM25 implementation is ~60 lines. The entire crawler is ~120 lines. Simplicity is not the absence of complexity — it's the result of understanding it deeply enough to remove the unnecessary parts.
+
+<br>
 
 ---
 
-## 🔬 How It Works — Deep Dive
-
-### 1. Web Crawling Pipeline
-
-The **`WebCrawler`** implements a classic **Breadth-First Search (BFS)** traversal:
-
-```
-Initialize: visited = {}, queue = [seedUrl]
-
-While queue is not empty AND visited.size < MAX_PAGES (100):
-    url = queue.poll()
-    if url ∈ visited or url ∉ targetDomain → skip
-    visited.add(url)
-    page = Jsoup.connect(url).get()          // HTTP fetch with 5s timeout
-    CrawlerService.processPage(url, page)    // Extract, tokenize, index, store
-    for each <a href> link in page:
-        if link ∉ visited AND link ∈ domain → queue.add(link)
-    Thread.sleep(1000)                       // Polite 1-second delay
-```
-
-The **`WebCrawler`** also supports **Wikipedia article crawling** via `crawlWikipedia(query, limit)`:
-1. Calls `WikipediaService.search(query, limit)` to discover relevant article URLs
-2. For each article URL, uses Jsoup to fetch the full page
-3. Passes each page through the **exact same** `CrawlerService.processPage()` pipeline
-4. Result: Wikipedia articles are indexed identically to web pages — same DB table, same inverted index, same BM25 search
-
-The **`CrawlerService`** processes each page (web or Wikipedia) through these stages:
-1. **Deduplication** — Checks `docRepo.existsByUrl(url)` to skip already-indexed pages
-2. **Content extraction** — Extracts `<title>` and `<body>` text via Jsoup DOM traversal
-3. **Text cleaning** — Passes body text through `TextProcessor.clean()` → `tokenize()`
-4. **Persistence** — Saves a `Document` entity (url, title, rawContent, tokens, timestamp) to the database
-5. **S3 upload** — Optionally uploads raw content to AWS S3 under `pages/{docId}` key (when `aws.s3.enabled=true`)
-6. **Inverted index** — Calls `IndexerService.index(doc)` to build token → document + frequency mappings
-7. **Autocomplete** — Feeds each individual token into the Trie via `AutocompleteService.insert()`
-
-### 2. Text Processing & Indexing
-
-**`TextProcessor`** applies a three-stage NLP pipeline:
-
-| Stage | Method | What It Does |
-|-------|--------|-------------|
-| **Clean** | `clean(raw)` | Lowercase → remove non-alphanumeric chars → collapse whitespace → trim |
-| **Tokenize** | `tokenize(cleaned)` | Split on whitespace → filter words ≤ 2 chars → remove 100+ English stop words → deduplicate |
-| **To List** | `toList(tokens)` | Convert space-delimited token string to `List<String>` for BM25 |
-
-**Stop words removed** (100+ words): *the, is, in, at, of, a, an, and, or, to, it, this, that, was, for, on, are, with, about, after, because, before, between, could, should, would, people, through, time, world, year, ...*
-
-**`IndexerService`** builds the inverted index for each document:
-1. Splits the document's token string into individual terms
-2. Counts the **frequency** of each token using Java Streams (`groupingBy` + `counting`)
-3. Persists each `{token, document_id, frequency}` tuple as an `InvertedIndex` entity with a database index on `token` for fast lookups
-
-### 3. BM25 Search Ranking Algorithm
-
-The **`BM25Scorer`** implements the [Okapi BM25](https://en.wikipedia.org/wiki/Okapi_BM25) information retrieval formula, the same algorithm powering Elasticsearch and Apache Lucene:
-
-**Formula:**
-
-```
-score(D, Q) = Σ  IDF(t) × [ f(t,D) × (k₁ + 1) ] / [ f(t,D) + k₁ × (1 - b + b × |D| / avgdl) ]
-             t∈Q
-```
-
-Where:
-
-| Symbol | Meaning | Value |
-|--------|---------|-------|
-| `k₁` | Term frequency saturation parameter | `1.5` |
-| `b` | Length normalization parameter | `0.75` |
-| `f(t, D)` | Frequency of term `t` in document `D` | From `InvertedIndex.freq` |
-| `\|D\|` | Length of document `D` (token count) | `doc.getTokens().split().length` |
-| `avgdl` | Average document length across the entire corpus | Computed dynamically |
-| `N` | Total number of documents | `docRepo.count()` |
-| `n(t)` | Number of documents containing term `t` | `indexRepo.findByToken(t).size()` |
-
-**IDF (Inverse Document Frequency):**
-
-```
-IDF(t) = ln( (N - n(t) + 0.5) / (n(t) + 0.5) + 1 )
-```
-
-**Search execution flow:**
-1. For each query token, fetch all matching `InvertedIndex` entries (with eager-loaded `Document` via `JOIN FETCH`)
-2. Calculate IDF for the token based on document frequency
-3. For each document containing that token, compute the BM25 term-frequency component
-4. Accumulate scores across all query tokens per document
-5. Sort all documents by descending score → return ordered list of document IDs
-
-### 4. Trie Autocomplete
-
-The **Trie** (prefix tree) provides O(k) lookups where k = prefix length:
-
-```
-Example Trie storing: "java", "javascript", "json"
-
-         root
-        /    \
-       j      ...
-       |
-       a ── s
-       |      \
-       v      o
-       |       \
-       a*      n*
-       |
-       s
-       |
-       c
-       |
-       r
-       |
-       i
-       |
-       p
-       |
-       t*
-
-* = isEndOfWord
-```
-
-**Key operations:**
-- **Insert** (`O(k)`): Traverse/create nodes character by character; mark leaf as `isEndOfWord`
-- **Search** (`O(k + m)`): Navigate to prefix node, then DFS to collect up to **10 complete words** (m = results found)
-- **Startup loading** (`@PostConstruct`): Pre-populates the Trie from:
-  1. All past `SearchQuery` entries (highest priority — real user queries)
-  2. All `Document` tokens (crawled content vocabulary, filtered to ≥ 3 chars)
-  3. All `Document` titles (lowercased)
-
-### 5. Wikipedia Crawling & Knowledge Panel
-
-**`WikipediaService`** uses Java's built-in `HttpClient` (Java 11+) to call two Wikipedia APIs:
-
-| API | Endpoint | Purpose |
-|-----|----------|--------|
-| **MediaWiki Search** | `?action=query&list=search` | Discover relevant articles for a topic — used by `WebCrawler.crawlWikipedia()` to find URLs to crawl and index locally |
-| **REST Summary** | `/api/rest_v1/page/summary/{title}` | Clean article extract, thumbnail, description — used by the **Knowledge Panel** sidebar enrichment |
-
-The Wikipedia integration serves two distinct purposes:
-1. **Crawl Discovery** — `search()` finds article URLs which are then fetched by Jsoup and indexed through the standard `CrawlerService.processPage()` pipeline. After indexing, these articles live in the local database and are searched via BM25 like any other page.
-2. **Knowledge Panel Enrichment** — `getArticleSummary()` fetches a rich summary (title, extract, thumbnail, description) shown as a sidebar alongside search results. This is a **live API call** for display only, not indexed.
-
-All HTTP responses are parsed with **Jackson `ObjectMapper`**. HTML snippets are cleaned by stripping tags and decoding entities. Timeouts are set to 10 seconds with proper error handling.
-
-### 6. Analytics Tracking
-
-Every user interaction is logged in the `search_queries` table:
-
-- **`logQuery(query)`** — Finds or creates a `SearchQuery` record, increments `count`, updates `lastSearchedAt`
-- **`logClick(query)`** — Finds the `SearchQuery` record, increments `clicks`
-- **`getAnalytics()`** — Returns `{ topQueries: Top10ByCount, topClicked: Top10ByClicks }`
-
-The frontend Dashboard calculates:
-- **Total Queries** = sum of all query counts
-- **Total Clicks** = sum of all click counts
-- **Unique Queries** = number of distinct query strings
-- **Average CTR** = (Total Clicks / Total Queries) × 100%
-
-### 7. Caching Strategy
-
-| Profile | Cache Type | TTL | Details |
-|---------|-----------|-----|---------|
-| `dev` / `local` | Simple (ConcurrentMap) | Unlimited | In-memory, lost on restart |
-| `prod` | Redis (ElastiCache) | 10 minutes | JSON-serialized, null values excluded |
-
-Search results are cached with the `@Cacheable` annotation using key pattern: `searchCache::{query}-{page}-{size}`. This avoids redundant BM25 scoring for repeated identical queries.
-
----
+<br>
 
 ## 🛠️ Tech Stack
 
-### Backend
+### Backend — *The Engine*
 
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| Java | 21 (Temurin) | Programming language |
-| Spring Boot | 3.4.1 | Application framework |
-| Spring Data JPA | 3.4.x | ORM & repository abstraction |
-| Hibernate | 6.6.4 | JPA implementation |
-| Spring Cache | 3.4.x | Result caching abstraction |
-| Jsoup | 1.17.2 | HTML parsing & web crawling |
-| H2 Database | 2.3.x | In-memory database (dev) |
-| PostgreSQL | 15+ | Persistent database (local/prod) |
-| Redis | 7.x | Distributed cache (prod) |
-| AWS SDK v2 | 2.25.0 | S3 object storage |
-| HikariCP | 5.x | JDBC connection pooling |
-| Lombok | 1.18.x | Boilerplate reduction (@Data, @NoArgsConstructor) |
-| Jackson | 2.17.x | JSON parsing (Wikipedia API responses) |
-| Tomcat | 10.1.34 | Embedded servlet container |
+| Technology | What It Does |
+|------------|-------------|
+| **Java 21** | The language — modern, fast, strongly typed |
+| **Spring Boot 3.4** | Framework — handles HTTP, database, caching, configuration |
+| **Spring Data JPA** | Database access — write Java, get SQL for free |
+| **Hibernate 6** | ORM — maps Java objects to database tables |
+| **Jsoup 1.17** | HTML parser — the crawler uses this to read web pages |
+| **PostgreSQL 15** | Production database — reliable, battle-tested |
+| **H2 Database** | Dev database — runs in memory, zero setup |
+| **Redis 7** | Cache layer — makes repeated searches instant |
+| **AWS S3** | Optional cloud storage for crawled page content |
 
-### Frontend
+### Frontend — *The Face*
 
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| React | 18.2 | UI component library |
-| Vite | 5.1 | Build tool & dev server with HMR |
-| Tailwind CSS | 3.4 | Utility-first CSS framework |
-| Axios | 1.6.7 | HTTP client for API calls |
-| PostCSS | 8.4 | CSS processing pipeline |
-| Autoprefixer | 10.4 | CSS vendor prefix automation |
+| Technology | What It Does |
+|------------|-------------|
+| **React 18** | UI library — components, state, reactivity |
+| **Vite 5** | Build tool — sub-second hot reload during development |
+| **Tailwind CSS 3.4** | Styling — utility classes instead of writing CSS files |
+| **Axios** | HTTP client — talks to the backend API |
 
-### Build & Tooling
+### Build & Deploy
 
 | Tool | Purpose |
 |------|---------|
-| Gradle 8.x (with wrapper) | Java build system, dependency management |
-| npm | Frontend package management |
-| Spring Profiles | Environment-specific configuration (`dev`, `local`, `prod`) |
+| **Gradle 8** | Java build system (included via wrapper — no install needed) |
+| **npm** | Frontend package manager |
+| **Spring Profiles** | `dev` → H2 in-memory · `local` → PostgreSQL · `prod` → AWS RDS + Redis |
+
+<br>
 
 ---
 
-## 🚀 Getting Started
+<br>
 
-### Prerequisites
+## 📡 API Reference
 
-| Requirement | Version | Required? | Notes |
-|-------------|---------|-----------|-------|
-| Java JDK | 21+ | ✅ Yes | [Download Temurin](https://adoptium.net/) |
-| Node.js | 18+ | ✅ Yes | [Download](https://nodejs.org/) — includes npm |
-| Git | Any | ✅ Yes | [Download](https://git-scm.com/) |
-| PostgreSQL | 15+ | ❌ Optional | Only for `local` / `prod` profiles |
-| Redis | 7+ | ❌ Optional | Only for `prod` profile caching |
-| AWS Account | — | ❌ Optional | Only for S3 storage & production deployment |
+All endpoints live under `http://localhost:8080/api`.
 
-### Installation
+### Search
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/sujalkamble/Search-Engine.git
-   cd Search-Engine
-   ```
-
-2. **Backend — build the project** (downloads dependencies via Gradle wrapper)
-   ```bash
-   ./gradlew build -x test
-   ```
-
-3. **Frontend — install npm dependencies**
-   ```bash
-   cd frontend
-   npm install
-   cd ..
-   ```
-
-### Running the Application
-
-#### Option 1: Development Mode (Recommended — Zero External Dependencies)
-
-Run backend and frontend in **separate terminals**:
-
-**Terminal 1 — Spring Boot backend:**
-```bash
-./gradlew bootRun
 ```
-> Starts on port **8080** with H2 in-memory database. No PostgreSQL or Redis needed.
-
-**Terminal 2 — React frontend (Vite dev server):**
-```bash
-cd frontend
-npm run dev
-```
-> Starts on port **5173** with hot-reload. API calls are proxied to `localhost:8080` via Vite config.
-
-#### Option 2: Local PostgreSQL Profile
-
-```bash
-# 1. Create PostgreSQL database and user
-psql -U postgres -f database/setup-local.sql
-
-# 2. Apply the schema
-psql -U searchuser -d searchengine -f database/schema.sql
-
-# 3. Run with local profile
-SPRING_PROFILE=local ./gradlew bootRun
+GET /api/search?q=machine+learning&page=0&size=10
 ```
 
-#### Option 3: Production JAR
+Searches the unified index (all crawled pages + Wikipedia articles) using BM25 ranking.
 
-```bash
-# Build the backend JAR
-./gradlew bootJar
+<details>
+<summary><b>Response</b></summary>
 
-# Build frontend for production
-cd frontend && npm run build && cd ..
-
-# Run the production JAR
-java -jar build/libs/demo-0.0.1-SNAPSHOT.jar \
-  --spring.profiles.active=prod \
-  --DB_HOST=your-rds-endpoint \
-  --DB_USER=admin \
-  --DB_PASS=secret \
-  --REDIS_HOST=your-elasticache-endpoint
-```
-
-### Access Points
-
-| Service | URL | Notes |
-|---------|-----|-------|
-| 🖥️ Frontend (dev) | http://localhost:5173 | Vite dev server with HMR |
-| 🔌 Backend API | http://localhost:8080/api | REST endpoints |
-| 🗄️ H2 Console | http://localhost:8080/h2-console | Dev profile only. JDBC URL: `jdbc:h2:mem:searchengine`, User: `sa`, Password: *(empty)* |
-| ❤️ Health Check | http://localhost:8080/api/health | Returns `{"status":"UP","message":"Search Engine is running!"}` |
-
----
-
-## 📚 API Documentation
-
-### Search Endpoint
-
-#### `GET /api/search` — Search Documents
-
-Search across the unified local index (all crawled pages — websites + Wikipedia articles) with BM25 ranking and pagination.
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `q` | string | **required** | Search query |
-| `page` | int | `0` | Page number (0-indexed) |
-| `size` | int | `10` | Results per page |
-
-**Response (200 OK):**
 ```json
 {
   "results": [
     {
       "id": 1,
-      "url": "https://example.com/page",
-      "title": "Example Page Title",
-      "rawContent": "Cleaned page content text...",
-      "tokens": "example page title content",
+      "url": "https://en.wikipedia.org/wiki/Machine_learning",
+      "title": "Machine learning - Wikipedia",
+      "rawContent": "Machine learning is a subset of artificial intelligence...",
+      "tokens": "machine learning subset artificial intelligence",
       "crawledAt": "2026-02-18T10:30:00"
     }
   ],
-  "totalHits": 150,
+  "totalHits": 47,
   "page": 0,
-  "totalPages": 15
+  "totalPages": 5
 }
 ```
+</details>
 
-**Example:**
-```bash
-curl "http://localhost:8080/api/search?q=java+programming&page=0&size=10"
+### Autocomplete
+
+```
+GET /api/autocomplete?prefix=mac
 ```
 
----
+Returns up to 10 suggestions from the Trie.
 
-### Autocomplete Endpoint
+<details>
+<summary><b>Response</b></summary>
 
-#### `GET /api/autocomplete` — Get Suggestions
-
-Returns autocomplete suggestions from the local Trie (populated from all indexed content — websites + Wikipedia articles).
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `prefix` | string | Prefix to search (minimum 2 characters recommended) |
-
-**Response (200 OK):**
 ```json
-["javascript", "java", "javafx", "jackson"]
+["machine", "machine learning", "macos", "macro"]
+```
+</details>
+
+### Knowledge Panel
+
+```
+GET /api/knowledge?q=machine+learning
 ```
 
----
+Returns a Wikipedia summary with image for the sidebar panel.
 
-### Knowledge Panel Endpoint
+<details>
+<summary><b>Response</b></summary>
 
-#### `GET /api/knowledge` — Wikipedia Article Summary
-
-Returns a rich article summary for the Knowledge Panel sidebar.
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `q` | string | Article title to look up |
-
-**Response (200 OK):**
 ```json
 {
-  "title": "Java (programming language)",
-  "extract": "Java is a high-level, class-based, object-oriented programming language...",
-  "description": "Object-oriented programming language",
-  "url": "https://en.wikipedia.org/wiki/Java_(programming_language)",
-  "thumbnail": "https://upload.wikimedia.org/wikipedia/en/thumb/...",
-  "image": "https://upload.wikimedia.org/wikipedia/en/..."
+  "title": "Machine learning",
+  "extract": "Machine learning is a subset of artificial intelligence...",
+  "description": "Scientific study of algorithms and statistical models",
+  "url": "https://en.wikipedia.org/wiki/Machine_learning",
+  "thumbnail": "https://upload.wikimedia.org/...",
+  "image": "https://upload.wikimedia.org/..."
 }
 ```
+</details>
+
+### Crawl a Website
+
+```
+POST /api/crawl?url=https://example.com&domain=example.com
+```
+
+Starts a background BFS crawl from the given URL. Returns immediately.
+
+### Index Wikipedia Articles
+
+```
+POST /api/crawl/wikipedia?q=quantum+physics&limit=25
+```
+
+Discovers and indexes up to 25 Wikipedia articles on the topic.
+
+### Analytics
+
+```
+GET  /api/analytics       → Dashboard data (top queries, top clicks)
+POST /api/click?query=... → Log a result click
+```
+
+### Health Check
+
+```
+GET /api/health → {"status": "UP", "message": "Search Engine is running!"}
+```
+
+<br>
 
 ---
 
-### Crawler Endpoints
+<br>
 
-#### `POST /api/crawl` — Start Web Crawling
+## 🏗️ Architecture
 
-Starts a background crawl from a seed URL. Returns immediately; crawling runs asynchronously in a separate thread.
+### The Big Picture
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `url` | string | **required** | Starting URL to crawl |
-| `domain` | string | `""` | Domain filter to restrict crawling (e.g., `example.com`) |
-
-**Response (200 OK):**
 ```
-"Crawling started: https://example.com"
-```
-
-**Example:**
-```bash
-curl -X POST "http://localhost:8080/api/crawl?url=https://example.com&domain=example.com"
-```
-
-#### `POST /api/crawl/wikipedia` — Index Wikipedia Articles
-
-Searches Wikipedia for articles matching a topic, then crawls and indexes each one into the local database through the same pipeline as website crawling. Returns immediately; indexing runs asynchronously.
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `q` | string | **required** | Topic to search Wikipedia for |
-| `limit` | int | `20` | Max number of articles to fetch and index (1–50) |
-
-**Response (200 OK):**
-```json
-{
-  "message": "Started indexing Wikipedia articles for: Java programming",
-  "articlesRequested": 20
-}
-```
-
-**Example:**
-```bash
-curl -X POST "http://localhost:8080/api/crawl/wikipedia?q=machine+learning&limit=25"
+                           ┌─────────────────────┐
+                           │     YOU (Browser)    │
+                           └──────────┬──────────┘
+                                      │
+                           ┌──────────▼──────────┐
+                           │   React Frontend    │
+                           │   (Vite + Tailwind) │
+                           │   localhost:5173     │
+                           └──────────┬──────────┘
+                                      │ HTTP (JSON)
+                           ┌──────────▼──────────┐
+                           │  Spring Boot API    │
+                           │  localhost:8080      │
+                           │                     │
+                           │  ┌───────────────┐  │
+                           │  │ Search Engine │  │
+                           │  │ BM25 + Index  │  │
+                           │  └───────────────┘  │
+                           │  ┌───────────────┐  │
+                           │  │  Web Crawler  │  │
+                           │  │  BFS Engine   │  │
+                           │  └───────────────┘  │
+                           │  ┌───────────────┐  │
+                           │  │ Autocomplete  │  │
+                           │  │ Trie Engine   │  │
+                           │  └───────────────┘  │
+                           └──┬──────┬───────┬──┘
+                              │      │       │
+                     ┌────────▼┐  ┌──▼───┐  ┌▼────────┐
+                     │PostgreSQL│  │Redis │  │Wikipedia│
+                     │  / H2   │  │Cache │  │  API    │
+                     └─────────┘  └──────┘  └─────────┘
 ```
 
-> After indexing completes, the Wikipedia articles are searchable via the regular `/api/search` endpoint, ranked by BM25 alongside any web-crawled pages.
+### What Each Module Does
+
+| Module | Responsibility | Key Insight |
+|--------|---------------|-------------|
+| **`crawler/`** | Visits web pages via BFS, fetches HTML | A crawler is just a *very polite* automated browser |
+| **`indexer/`** | Cleans text, builds inverted index | Tokenization + stop word removal = 10× better search quality |
+| **`search/`** | BM25 scoring, pagination, caching | 60 lines of math that rank results better than naive keyword matching |
+| **`autocomplete/`** | Trie data structure, prefix search | O(k) lookup — speed doesn't depend on how many words exist |
+| **`wikipedia/`** | Article discovery + Knowledge Panel | Two APIs: one for crawl discovery, one for rich display |
+| **`analytics/`** | Query/click logging, dashboard data | Simple counters that reveal powerful user behavior patterns |
+| **`model/`** | JPA entities: Document, InvertedIndex, SearchQuery | The shape of your data determines the shape of everything else |
+| **`config/`** | CORS, Redis, AWS S3 | Configuration is boring until it breaks in production |
+
+### Data Flow: Crawl → Index → Search
+
+```
+CRAWLING (building the library)
+═══════════════════════════════════════════════════════════
+
+  URL → Jsoup fetches HTML → Extract title + body text
+                                     │
+                    ┌────────────────┼────────────────┐
+                    ▼                ▼                ▼
+              Save Document    Build Inverted     Feed Trie
+              to Database      Index entries      (autocomplete)
+              (url, title,     (word → docId      (word → prefix
+               content)         + frequency)        tree)
+
+
+SEARCHING (finding the right book)
+═══════════════════════════════════════════════════════════
+
+  Query → Clean & Tokenize → Look up Inverted Index
+                                     │
+                                     ▼
+                              BM25 Scoring
+                              (IDF × TF for each doc)
+                                     │
+                                     ▼
+                            Sort by score (desc)
+                                     │
+                           ┌─────────┼──────────┐
+                           ▼         ▼          ▼
+                      Paginate   Cache it    Log query
+                      (10/page)  (next time   (analytics)
+                                  = instant)
+```
+
+### Database Schema
+
+Three tables. That's all you need for a search engine:
+
+```
+┌───────────────────┐       ┌────────────────────────┐
+│    documents      │       │    inverted_index       │
+├───────────────────┤       ├────────────────────────┤
+│ id (PK)           │◄──────│ doc_id (FK)             │
+│ url (unique)      │       │ token (indexed)         │
+│ title             │       │ freq (term frequency)   │
+│ raw_content       │       └────────────────────────┘
+│ tokens            │
+│ crawled_at        │       ┌────────────────────────┐
+└───────────────────┘       │    search_queries      │
+                            ├────────────────────────┤
+                            │ query (unique)          │
+                            │ count (search count)    │
+                            │ clicks (click count)    │
+                            │ last_searched_at        │
+                            └────────────────────────┘
+```
+
+<br>
 
 ---
 
-### Analytics Endpoints
-
-#### `GET /api/analytics` — Get Analytics Dashboard Data
-
-**Response (200 OK):**
-```json
-{
-  "topQueries": [
-    { "id": 1, "query": "java", "count": 150, "clicks": 45, "lastSearchedAt": "2026-02-18T14:20:00" }
-  ],
-  "topClicked": [
-    { "id": 2, "query": "spring boot", "count": 80, "clicks": 62, "lastSearchedAt": "2026-02-18T14:15:00" }
-  ]
-}
-```
-
-#### `POST /api/click` — Log a Result Click
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `query` | string | The search query whose result was clicked |
-
-**Response:** `200 OK` (empty body)
-
----
-
-### Utility Endpoints
-
-#### `GET /api/health` — Health Check
-
-**Response (200 OK):**
-```json
-{
-  "status": "UP",
-  "message": "Search Engine is running!"
-}
-```
-
----
+<br>
 
 ## 📁 Project Structure
 
 ```
-Search-Engine/
+seek./
 │
-├── build.gradle                              # Gradle build config (plugins, dependencies)
-├── settings.gradle                           # Root project name
-├── gradlew / gradlew.bat                     # Gradle wrapper scripts (no Gradle install needed)
+├── src/main/java/com/searchengine/
+│   ├── SearchEngineApplication.java  ← Entry point
+│   ├── model/                        ← Database entities
+│   ├── repository/                   ← Database queries
+│   ├── config/                       ← CORS, Redis, S3 setup
+│   ├── crawler/                      ← BFS web crawler + Wikipedia crawler
+│   ├── indexer/                      ← Text processing + inverted index builder
+│   ├── search/                       ← BM25 scorer + search orchestration + REST API
+│   ├── autocomplete/                 ← Trie data structure + prefix search
+│   ├── wikipedia/                    ← Wikipedia API integration
+│   └── analytics/                    ← Query/click tracking
 │
-├── src/
-│   ├── main/
-│   │   ├── java/com/searchengine/
-│   │   │   ├── SearchEngineApplication.java  # @SpringBootApplication + @EnableCaching entry point
-│   │   │   │
-│   │   │   ├── model/                        # ── JPA Entities ──────────────────────────
-│   │   │   │   ├── Document.java             #   Crawled page (url, title, rawContent, tokens, crawledAt)
-│   │   │   │   ├── InvertedIndex.java        #   Token → Document mapping with term frequency
-│   │   │   │   └── SearchQuery.java          #   Search analytics (query, count, clicks, lastSearchedAt)
-│   │   │   │
-│   │   │   ├── repository/                   # ── Spring Data JPA Repositories ──────────
-│   │   │   │   ├── DocumentRepository.java   #   existsByUrl(), findAllByIdIn()
-│   │   │   │   ├── InvertedIndexRepository.java  # findByToken() with JOIN FETCH document
-│   │   │   │   └── SearchQueryRepository.java    # findByQuery(), findTop10ByOrderByCountDesc()
-│   │   │   │
-│   │   │   ├── config/                       # ── Configuration Beans ───────────────────
-│   │   │   │   ├── WebConfig.java            #   CORS mappings for /api/** endpoints
-│   │   │   │   ├── RedisConfig.java          #   Redis cache config (@Profile("redis") only)
-│   │   │   │   └── AwsS3Config.java          #   S3Client bean (conditional on aws.s3.enabled=true)
-│   │   │   │
-│   │   │   ├── crawler/                      # ── Unified Crawling Module ──────────────
-│   │   │   │   ├── WebCrawler.java           #   BFS website crawler + Wikipedia article crawler
-│   │   │   │   └── CrawlerService.java       #   Process page: extract → clean → index → S3 → Trie
-│   │   │   │
-│   │   │   ├── indexer/                      # ── Text Processing & Indexing ─────────────
-│   │   │   │   ├── TextProcessor.java        #   clean() + tokenize() + toList(), 100+ stop words
-│   │   │   │   └── IndexerService.java       #   Build inverted index with token frequency counts
-│   │   │   │
-│   │   │   ├── search/                       # ── Search Engine Core ─────────────────────
-│   │   │   │   ├── BM25Scorer.java           #   Okapi BM25: IDF × TF scoring with k₁=1.5, b=0.75
-│   │   │   │   ├── SearchService.java        #   Orchestrate: tokenize → score → paginate → cache → log
-│   │   │   │   └── SearchController.java     #   REST: /search, /autocomplete, /knowledge, /crawl, /crawl/wikipedia, /click, /health
-│   │   │   │
-│   │   │   ├── autocomplete/                 # ── Autocomplete Module ────────────────────
-│   │   │   │   ├── TrieNode.java             #   Node: Map<Character, TrieNode> + isEndOfWord flag
-│   │   │   │   └── AutocompleteService.java  #   Insert, DFS search, @PostConstruct DB preloading
-│   │   │   │
-│   │   │   ├── wikipedia/                    # ── Wikipedia Integration ───────────────────
-│   │   │   │   └── WikipediaService.java     #   search() for crawl discovery + getArticleSummary() for Knowledge Panel
-│   │   │   │
-│   │   │   └── analytics/                    # ── Analytics Module ────────────────────────
-│   │   │       ├── AnalyticsService.java     #   logQuery(), logClick(), getAnalytics()
-│   │   │       └── AnalyticsController.java  #   REST: GET /analytics
-│   │   │
-│   │   └── resources/
-│   │       ├── application.properties        # Base config: port, CORS, cache type, AWS, logging
-│   │       ├── application-dev.properties    # H2 in-memory, create-drop DDL, SQL debug logging
-│   │       ├── application-local.properties  # PostgreSQL localhost, HikariCP pool, update DDL
-│   │       └── application-prod.properties   # AWS RDS, Redis cache, S3 enabled, batch inserts
-│   │
-│   └── test/java/com/searchengine/          # Unit tests (JUnit 5 + Spring Boot Test)
-│       ├── autocomplete/                     # AutocompleteService tests
-│       ├── indexer/                           # TextProcessor & IndexerService tests
-│       └── search/                            # BM25Scorer & SearchService tests
+├── frontend/src/
+│   ├── App.jsx                       ← Main app (Home / Results / Settings views)
+│   ├── components/
+│   │   ├── SearchBar.jsx             ← Input + autocomplete dropdown
+│   │   ├── SearchResults.jsx         ← Result cards with highlighting
+│   │   ├── KnowledgePanel.jsx        ← Wikipedia sidebar
+│   │   ├── Pagination.jsx            ← Page navigation
+│   │   ├── AnalyticsDashboard.jsx    ← Stats + tables
+│   │   └── CrawlerPanel.jsx          ← Wikipedia indexer + website crawler
+│   └── api/searchApi.js              ← API client (Axios)
 │
-├── frontend/
-│   ├── package.json                          # npm dependencies: React 18, Axios, Tailwind
-│   ├── vite.config.js                        # Vite config: port 5173, API proxy → :8080
-│   ├── tailwind.config.js                    # Tailwind theme & content paths
-│   ├── postcss.config.js                     # PostCSS: tailwindcss + autoprefixer
-│   ├── index.html                            # HTML entry point
-│   └── src/
-│       ├── main.jsx                          # React DOM root render
-│       ├── App.jsx                           # Main app: state management, 3 views (Home/Results/Settings)
-│       ├── index.css                         # Tailwind imports + custom animations (shimmer, fade-in)
-│       ├── api/
-│       │   └── searchApi.js                  # Axios instance + unified API wrappers (search, autocomplete, crawl, crawlWikipedia)
-│       └── components/
-│           ├── SearchBar.jsx                 # Search input + autocomplete dropdown (unified local Trie) + keyboard nav
-│           ├── SearchResults.jsx             # Result cards: favicon, breadcrumb URL, highlighted snippets
-│           ├── KnowledgePanel.jsx            # Wikipedia sidebar: thumbnail, extract, expandable text
-│           ├── Pagination.jsx                # Google-style: colored logo + numbered buttons + prev/next
-│           ├── AnalyticsDashboard.jsx        # Tables: top queries & clicks, 4 stat cards, 30s auto-refresh
-│           └── CrawlerPanel.jsx              # Two panels: Wikipedia article indexer + website crawler
-│
-├── database/
-│   ├── schema.sql                            # PostgreSQL DDL: 3 tables + 8 indexes
-│   ├── setup-local.sql                       # CREATE DATABASE, CREATE USER, GRANT
-│   └── test-data.sql                         # Sample rows for testing
-│
-├── gradle/wrapper/                           # Gradle wrapper JAR + properties
-├── LICENSE                                   # MIT License (Sujal Kamble, 2026)
-└── README.md                                 # This file
+├── database/                         ← SQL schema + setup scripts
+├── build.gradle                      ← Java dependencies
+└── frontend/package.json             ← JS dependencies
 ```
 
+<br>
+
 ---
+
+<br>
 
 ## ⚙️ Configuration
 
-### Environment Profiles
+### Three Environments
 
-The application supports three Spring profiles, selected via the `SPRING_PROFILE` environment variable (defaults to `dev`):
+| Profile | Database | Cache | Setup Required |
+|---------|----------|-------|----------------|
+| **`dev`** *(default)* | H2 (in-memory) | In-memory | **Nothing** — just run it |
+| **`local`** | PostgreSQL | In-memory | Install PostgreSQL, run `database/setup-local.sql` |
+| **`prod`** | AWS RDS | Redis | Full cloud setup (RDS + ElastiCache + S3) |
 
-| Profile | Database | Cache | S3 | DDL Strategy | HikariCP Pool | Use Case |
-|---------|----------|-------|----|-------------|----------------|----------|
-| **`dev`** (default) | H2 in-memory | Simple (ConcurrentMap) | Disabled | `create-drop` | Default | Local development, zero setup |
-| **`local`** | PostgreSQL (localhost:5432) | Simple | Disabled | `update` | min=2, max=10 | Testing with persistent data |
-| **`prod`** | AWS RDS PostgreSQL | Redis (ElastiCache) | Enabled | `update` | min=5, max=20, leak detection | Production deployment |
+### Environment Variables (Production)
 
-### Environment Variables
+| Variable | What It's For |
+|----------|--------------|
+| `DB_HOST`, `DB_USER`, `DB_PASS` | PostgreSQL connection |
+| `REDIS_HOST`, `REDIS_PORT` | Redis cache |
+| `S3_BUCKET_NAME`, `AWS_REGION` | AWS S3 storage |
+| `SPRING_PROFILE` | Which config to use (`dev` / `local` / `prod`) |
 
-| Variable | Description | Default | Required In |
-|----------|-------------|---------|-------------|
-| `SPRING_PROFILE` | Active Spring profile (`dev`, `local`, `prod`) | `dev` | All |
-| `DB_HOST` | PostgreSQL hostname | — | `prod` |
-| `DB_PORT` | PostgreSQL port | `5432` | `prod` |
-| `DB_NAME` | Database name | `searchengine` | `prod` |
-| `DB_USER` | Database username | — | `prod` |
-| `DB_PASS` | Database password | — | `prod` |
-| `REDIS_HOST` | Redis/ElastiCache hostname | `localhost` | `prod` |
-| `REDIS_PORT` | Redis port | `6379` | `prod` |
-| `S3_BUCKET_NAME` | AWS S3 bucket for crawled content | `my-search-engine-data` | `prod` |
-| `AWS_REGION` | AWS region | `us-east-1` | `prod` |
-| `VITE_API_URL` | Backend API base URL (frontend) | `http://localhost:8080/api` | Frontend (if not using proxy) |
-
-### Application Properties
-
-Base configuration (`application.properties`):
-
-```properties
-server.port=8080                                       # HTTP server port
-spring.application.name=Search-Engine                  # App name
-allowed.origins=http://localhost:5173,...               # CORS allowed origins
-spring.cache.type=simple                               # Default cache (overridden in prod → redis)
-aws.s3.enabled=false                                   # S3 disabled by default
-crawler.max-pages=100                                  # Max pages per crawl session
-crawler.delay-ms=1000                                  # Delay between HTTP requests (ms)
-crawler.user-agent=SearchEngineBot/1.0                 # Crawler User-Agent header
-logging.level.com.searchengine=DEBUG                   # Application debug logging
-logging.pattern.console=%d{HH:mm:ss} %-5level %logger{36} - %msg%n
-```
+<br>
 
 ---
 
-## 🗄️ Database Schema
-
-### Entity-Relationship Diagram
-
-```
-┌───────────────────────┐         ┌──────────────────────────┐
-│      documents        │         │     inverted_index        │
-├───────────────────────┤         ├──────────────────────────┤
-│ id (PK, BIGSERIAL)    │◀───────┐│ id (PK, BIGSERIAL)       │
-│ url (UNIQUE, TEXT)     │        ││ token (VARCHAR 255) [IDX] │
-│ title (VARCHAR 500)    │        ││ doc_id (FK → documents)   │
-│ raw_content (TEXT)     │        ││ freq (INT, DEFAULT 1)     │
-│ tokens (TEXT)          │        │└──────────────────────────┘
-│ crawled_at (TIMESTAMP) │        │
-└───────────────────────┘        │  FK: doc_id → documents.id
-         ▲                        │  ON DELETE CASCADE
-         └────────────────────────┘
-
-┌───────────────────────┐
-│    search_queries      │
-├───────────────────────┤
-│ id (PK, BIGSERIAL)    │    (independent table — no FK)
-│ query (UNIQUE, 255)   │
-│ count (BIGINT, DEF 0) │
-│ clicks (BIGINT, DEF 0)│
-│ last_searched_at (TS)  │
-└───────────────────────┘
-```
-
-### SQL Definitions
-
-```sql
--- Table 1: Stores every crawled web page
-CREATE TABLE documents (
-    id            BIGSERIAL PRIMARY KEY,
-    url           TEXT UNIQUE NOT NULL,
-    title         VARCHAR(500),
-    raw_content   TEXT,
-    tokens        TEXT,
-    crawled_at    TIMESTAMP DEFAULT NOW()
-);
-
--- Table 2: Inverted index — maps each token → document with frequency
-CREATE TABLE inverted_index (
-    id      BIGSERIAL PRIMARY KEY,
-    token   VARCHAR(255) NOT NULL,
-    doc_id  BIGINT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
-    freq    INT DEFAULT 1
-);
-
--- Table 3: Search analytics — tracks queries and clicks
-CREATE TABLE search_queries (
-    id               BIGSERIAL PRIMARY KEY,
-    query            VARCHAR(255) UNIQUE NOT NULL,
-    count            BIGINT DEFAULT 0,
-    clicks           BIGINT DEFAULT 0,
-    last_searched_at TIMESTAMP DEFAULT NOW()
-);
-
--- Performance Indexes
-CREATE INDEX idx_token       ON inverted_index(token);          -- Fast token lookups
-CREATE INDEX idx_doc_id      ON inverted_index(doc_id);         -- Fast document joins
-CREATE INDEX idx_token_doc   ON inverted_index(token, doc_id);  -- Composite for BM25
-CREATE INDEX idx_url         ON documents(url);                  -- Duplicate URL checks
-CREATE INDEX idx_crawled_at  ON documents(crawled_at);           -- Time-based queries
-CREATE INDEX idx_query_count ON search_queries(count DESC);      -- Top queries sorting
-CREATE INDEX idx_query_clicks ON search_queries(clicks DESC);    -- Top clicks sorting
-CREATE INDEX idx_query_text  ON search_queries(query);           -- Query lookups
-```
-
----
-
-## 🚢 Deployment
-
-### Docker
-
-**Multi-stage Dockerfile:**
-```dockerfile
-# Stage 1: Build
-FROM eclipse-temurin:21-jdk-alpine AS build
-WORKDIR /app
-COPY . .
-RUN ./gradlew bootJar -x test
-
-# Stage 2: Run
-FROM eclipse-temurin:21-jre-alpine
-WORKDIR /app
-COPY --from=build /app/build/libs/*.jar app.jar
-EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
-```
-
-**Build & Run:**
-```bash
-docker build -t mysearch-engine .
-docker run -p 8080:8080 \
-  -e SPRING_PROFILE=prod \
-  -e DB_HOST=your-rds-host \
-  -e DB_USER=admin \
-  -e DB_PASS=secret \
-  -e REDIS_HOST=your-redis-host \
-  mysearch-engine
-```
-
-**Docker Compose (full stack — PostgreSQL + Redis + App):**
-```yaml
-version: '3.8'
-services:
-  db:
-    image: postgres:15-alpine
-    environment:
-      POSTGRES_DB: searchengine
-      POSTGRES_USER: searchuser
-      POSTGRES_PASSWORD: search123
-    ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-      - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
-
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-
-  backend:
-    build: .
-    ports:
-      - "8080:8080"
-    environment:
-      SPRING_PROFILE: local
-      DB_HOST: db
-      DB_USER: searchuser
-      DB_PASS: search123
-      REDIS_HOST: redis
-    depends_on:
-      - db
-      - redis
-
-volumes:
-  pgdata:
-```
-
-### AWS Architecture
-
-Recommended production architecture:
-
-```
-┌─────────────┐     ┌──────────────┐     ┌────────────────┐
-│  Route 53   │────▶│  ALB / EC2   │────▶│  RDS           │
-│  (DNS)      │     │  (Backend)   │     │  PostgreSQL 15  │
-└─────────────┘     └──────┬───────┘     └────────────────┘
-                           │
-                 ┌─────────┼──────────┐
-                 ▼                    ▼
-       ┌───────────────┐    ┌───────────────┐
-       │  ElastiCache  │    │  S3 Bucket    │
-       │  (Redis 7)    │    │  (Page Data)  │
-       └───────────────┘    └───────────────┘
-```
-
-| AWS Service | Purpose | Config |
-|-------------|---------|--------|
-| **EC2** / **ECS Fargate** | Run the Spring Boot JAR | t3.medium or higher |
-| **RDS PostgreSQL** | Persistent document & index storage | db.t3.medium, Multi-AZ |
-| **ElastiCache Redis** | Search result caching (10 min TTL) | cache.t3.micro |
-| **S3** | Raw crawled page content storage | Standard storage class |
-| **ALB** | Load balancing + HTTPS termination | With ACM certificate |
-| **Route 53** | DNS management | A/AAAA records to ALB |
-
----
+<br>
 
 ## 🧪 Testing
-
-The project uses **JUnit 5** with **Spring Boot Test** for unit and integration testing.
 
 ```bash
 # Run all tests
 ./gradlew test
 
-# Run with verbose output
-./gradlew test --info
-
-# Run a specific test class
+# Run a specific test
 ./gradlew test --tests "com.searchengine.search.BM25ScorerTest"
 
-# View the HTML test report
+# View test report
 open build/reports/tests/test/index.html
 ```
 
-Test packages mirror the source structure:
-- `autocomplete/` — Trie insert/search behavior
-- `indexer/` — Text processing and inverted index construction
-- `search/` — BM25 scoring and search orchestration
+Tests cover:
+- ✅ BM25 scoring accuracy
+- ✅ Text processing (tokenization, stop words, cleaning)
+- ✅ Trie insert/search behavior
+- ✅ Inverted index construction
+- ✅ Search result ordering
+
+<br>
 
 ---
+
+<br>
+
+## 🚢 Running with Docker
+
+```bash
+# Build the image
+docker build -t seek-engine .
+
+# Run with default (dev) profile
+docker run -p 8080:8080 seek-engine
+
+# Run with PostgreSQL + Redis (production)
+docker run -p 8080:8080 \
+  -e SPRING_PROFILE=prod \
+  -e DB_HOST=your-db-host \
+  -e DB_USER=admin \
+  -e DB_PASS=secret \
+  -e REDIS_HOST=your-redis-host \
+  seek-engine
+```
+
+<br>
+
+---
+
+<br>
 
 ## 🤝 Contributing
 
-Contributions are welcome! Here's how to get started:
+Contributions are welcome! Fork the repo, create a feature branch, and open a PR.
 
-1. **Fork** the repository
-2. **Create** a feature branch:
-   ```bash
-   git checkout -b feature/amazing-feature
-   ```
-3. **Make** your changes and ensure tests pass:
-   ```bash
-   ./gradlew test
-   ```
-4. **Commit** with a descriptive message:
-   ```bash
-   git commit -m "feat: add amazing feature"
-   ```
-5. **Push** to your fork:
-   ```bash
-   git push origin feature/amazing-feature
-   ```
-6. **Open** a Pull Request against `main`
+```bash
+git checkout -b feature/your-idea
+# make changes
+./gradlew test                    # make sure tests pass
+git commit -m "feat: your idea"
+git push origin feature/your-idea
+# open a Pull Request
+```
 
-### Development Guidelines
-
-- Follow existing code style and package organization patterns
-- Add unit tests for new functionality
-- Update this README if adding new endpoints or features
-- Use meaningful commit messages ([Conventional Commits](https://www.conventionalcommits.org/) preferred)
-- Keep PRs focused — one feature or fix per PR
+<br>
 
 ---
+
+<br>
 
 ## 📄 License
 
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+MIT License — Copyright © 2026 [Sujal Kamble](https://github.com/sujalkamble007)
 
-```
-MIT License — Copyright (c) 2026 Sujal Kamble
-```
+Free to use, modify, and distribute. See [LICENSE](LICENSE) for details.
 
----
-
-## 🙏 Acknowledgments
-
-- [Okapi BM25 Algorithm](https://en.wikipedia.org/wiki/Okapi_BM25) — Robertson, Walker, Jones, Hancock-Beaulieu, Gatford (1994)
-- [Trie Data Structure](https://en.wikipedia.org/wiki/Trie) — Edward Fredkin (1960)
-- [Jsoup](https://jsoup.org/) — HTML parsing and web scraping library for Java
-- [Spring Boot](https://spring.io/projects/spring-boot) — Convention-over-configuration application framework
-- [Wikipedia MediaWiki API](https://www.mediawiki.org/wiki/API:Main_page) — Search, summary, and content APIs
-- [Tailwind CSS](https://tailwindcss.com/) — Utility-first CSS framework
-- [Vite](https://vitejs.dev/) — Next-generation frontend build tool
-- [React](https://react.dev/) — UI component library
+<br>
 
 ---
 
-<p align="center">
-  Built with ❤️ by <a href="https://github.com/sujalkamble">Sujal Kamble</a>
-</p>
+<br>
+
+<div align="center">
+
+### *"The best way to understand something is to build it."*
+
+<br>
+
+built with care by **[Sujal Kamble](https://github.com/sujalkamble007)**
+
+*seek. — find what matters.*
+
+</div>
