@@ -15,56 +15,48 @@ import java.util.Map;
 @RequestMapping("/api")
 @CrossOrigin(origins = "${allowed.origins}")
 public class SearchController {
-    
+
     @Autowired
     private SearchService searchService;
-    
+
     @Autowired
     private AutocompleteService autocompleteService;
-    
+
     @Autowired
     private WebCrawler webCrawler;
-    
+
     @Autowired
     private AnalyticsService analyticsService;
-    
+
     @Autowired
     private WikipediaService wikipediaService;
 
     /**
-     * GET /api/search?q=java&page=0&size=10&source=all
-     * Search with BM25 ranking and pagination
-     * source: "local" = crawled data only, "wiki" = Wikipedia only, "all" = both (default)
+     * GET /api/search?q=java&page=0&size=10
+     * Unified search with BM25 ranking and pagination.
+     * Searches the local inverted index (all crawled pages — websites + Wikipedia).
      */
     @GetMapping("/search")
     public ResponseEntity<Map<String, Object>> search(
             @RequestParam String q,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "all") String source) {
-        
-        if ("wiki".equalsIgnoreCase(source)) {
-            return ResponseEntity.ok(wikipediaService.searchWithPagination(q, page, size));
-        }
-        
+            @RequestParam(defaultValue = "10") int size) {
         return ResponseEntity.ok(searchService.search(q, page, size));
     }
 
     /**
      * GET /api/autocomplete?prefix=jav
-     * Returns local Trie suggestions + Wikipedia opensearch suggestions
+     * Returns autocomplete suggestions from the local Trie
      */
     @GetMapping("/autocomplete")
-    public ResponseEntity<Map<String, Object>> autocomplete(@RequestParam String prefix) {
-        List<String> local = autocompleteService.getSuggestions(prefix);
-        List<Map<String, String>> wiki = prefix.length() >= 2
-                ? wikipediaService.opensearch(prefix, 5) : List.of();
-        return ResponseEntity.ok(Map.of("local", local, "wiki", wiki));
+    public ResponseEntity<List<String>> autocomplete(@RequestParam String prefix) {
+        List<String> suggestions = autocompleteService.getSuggestions(prefix);
+        return ResponseEntity.ok(suggestions);
     }
 
     /**
      * GET /api/knowledge?q=java
-     * Returns Wikipedia article summary for knowledge panel
+     * Returns Wikipedia article summary for knowledge panel sidebar enrichment
      */
     @GetMapping("/knowledge")
     public ResponseEntity<Map<String, Object>> knowledgePanel(@RequestParam String q) {
@@ -80,9 +72,25 @@ public class SearchController {
     public ResponseEntity<String> crawl(
             @RequestParam String url,
             @RequestParam(defaultValue = "") String domain) {
-        // Start crawling in a separate thread
         new Thread(() -> webCrawler.startCrawl(url, domain)).start();
         return ResponseEntity.ok("Crawling started: " + url);
+    }
+
+    /**
+     * POST /api/crawl/wikipedia?q=java+programming&limit=20
+     * Fetch and index Wikipedia articles for a given topic.
+     * Articles are crawled and indexed into the same local database
+     * as web-crawled pages, searchable via the unified /search endpoint.
+     */
+    @PostMapping("/crawl/wikipedia")
+    public ResponseEntity<Map<String, Object>> crawlWikipedia(
+            @RequestParam String q,
+            @RequestParam(defaultValue = "20") int limit) {
+        new Thread(() -> webCrawler.crawlWikipedia(q, limit)).start();
+        return ResponseEntity.ok(Map.of(
+            "message", "Started indexing Wikipedia articles for: " + q,
+            "articlesRequested", limit
+        ));
     }
 
     /**
@@ -94,7 +102,7 @@ public class SearchController {
         analyticsService.logClick(query);
         return ResponseEntity.ok().build();
     }
-    
+
     /**
      * GET /api/health
      * Health check endpoint

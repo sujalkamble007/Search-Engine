@@ -16,39 +16,34 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [searchTime, setSearchTime] = useState(0);
-  const [searchSource, setSearchSource] = useState("wiki");
   const [showSettings, setShowSettings] = useState(false);
   const [settingsView, setSettingsView] = useState(null);
 
-  const handleSearch = useCallback(
-    async (q, p = 0, sourceOverride) => {
-      if (!q.trim()) return;
-      const src = sourceOverride || searchSource;
+  const handleSearch = useCallback(async (q, p = 0) => {
+    if (!q.trim()) return;
 
-      setLoading(true);
-      setQuery(q);
-      setPage(p);
-      setSearched(true);
-      setShowSettings(false);
+    setLoading(true);
+    setQuery(q);
+    setPage(p);
+    setSearched(true);
+    setShowSettings(false);
 
-      const t0 = performance.now();
-      try {
-        const { data } = await search(q, p, 10, src);
-        setSearchTime(((performance.now() - t0) / 1000).toFixed(2));
-        setResults(data.results || []);
-        setTotalPages(data.totalPages || 0);
-        setTotalHits(data.totalHits || 0);
-      } catch (err) {
-        console.error("Search error:", err);
-        setResults([]);
-        setTotalPages(0);
-        setTotalHits(0);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [searchSource]
-  );
+    const t0 = performance.now();
+    try {
+      const { data } = await search(q, p, 10);
+      setSearchTime(((performance.now() - t0) / 1000).toFixed(2));
+      setResults(data.results || []);
+      setTotalPages(data.totalPages || 0);
+      setTotalHits(data.totalHits || 0);
+    } catch (err) {
+      console.error("Search error:", err);
+      setResults([]);
+      setTotalPages(0);
+      setTotalHits(0);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   const handleResultClick = (doc) => {
     logClick(query).catch(() => {});
@@ -95,7 +90,7 @@ export default function App() {
             onClick={() => { setShowSettings(true); setSettingsView("crawler"); }}
             className="text-gray-700 hover:underline"
           >
-            Web Crawler
+            Index Pages
           </button>
           <button
             onClick={() => { setShowSettings(true); setSettingsView("analytics"); }}
@@ -118,27 +113,6 @@ export default function App() {
             <SearchBar onSearch={handleSearch} initialQuery="" isHome />
           </div>
 
-          {/* Source pills */}
-          <div className="flex justify-center gap-2 mt-7">
-            {[
-              { key: "wiki", label: "🌐 Wikipedia" },
-              { key: "local", label: "💾 Local Index" },
-              { key: "all", label: "🔍 All Sources" },
-            ].map(({ key, label }) => (
-              <button
-                key={key}
-                onClick={() => setSearchSource(key)}
-                className={`px-4 py-2 rounded-full text-sm transition-all border
-                  ${searchSource === key
-                    ? "bg-[#d2e3fc] border-[#d2e3fc] text-[#174ea6] font-medium"
-                    : "bg-gray-50 border-gray-200 text-gray-600 hover:border-gray-300 hover:shadow-sm"
-                  }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-
           {/* Buttons */}
           <div className="flex justify-center gap-3 mt-8">
             <button
@@ -149,13 +123,11 @@ export default function App() {
               MySearch Search
             </button>
             <button
-              onClick={() =>
-                window.open("https://en.wikipedia.org/wiki/Special:Random", "_blank")
-              }
+              onClick={() => { setShowSettings(true); setSettingsView("crawler"); }}
               className="px-5 py-2 bg-[#f8f9fa] text-sm text-gray-700 rounded
                          border border-[#f8f9fa] hover:border-gray-300 hover:shadow-sm transition-all"
             >
-              I'm Feeling Lucky
+              Index New Pages
             </button>
           </div>
         </div>
@@ -198,7 +170,7 @@ export default function App() {
           <div className="flex gap-1">
             {[
               { key: "analytics", label: "📊 Analytics" },
-              { key: "crawler", label: "🕷️ Web Crawler" },
+              { key: "crawler", label: "📚 Index Pages" },
             ].map(({ key, label }) => (
               <button
                 key={key}
@@ -248,7 +220,7 @@ export default function App() {
             <button
               onClick={() => { setShowSettings(true); setSettingsView("crawler"); }}
               className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-              title="Web Crawler"
+              title="Index Pages"
             >
               <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
@@ -256,41 +228,6 @@ export default function App() {
               </svg>
             </button>
           </div>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex gap-1 px-[166px]">
-          {[
-            { key: "wiki", label: "All" },
-            { key: "local", label: "Local Index" },
-          ].map(({ key, label }) => (
-            <button
-              key={key}
-              onClick={() => {
-                setSearchSource(key);
-                handleSearch(query, 0, key);
-              }}
-              className={`flex items-center gap-1.5 px-3 pb-3 pt-1 text-sm border-b-[3px] transition-colors
-                ${searchSource === key
-                  ? "border-[#1a73e8] text-[#1a73e8]"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
-            >
-              {key === "wiki" && (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              )}
-              {key === "local" && (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
-                </svg>
-              )}
-              {label}
-            </button>
-          ))}
         </div>
       </header>
 
@@ -330,19 +267,14 @@ export default function App() {
                     <li>Make sure all words are spelled correctly.</li>
                     <li>Try different keywords.</li>
                     <li>Try more general keywords.</li>
-                    {searchSource === "local" && (
-                      <li>
-                        <button
-                          onClick={() => {
-                            setSearchSource("wiki");
-                            handleSearch(query, 0, "wiki");
-                          }}
-                          className="text-blue-600 hover:underline"
-                        >
-                          Search Wikipedia instead
-                        </button>
-                      </li>
-                    )}
+                    <li>
+                      <button
+                        onClick={() => { setShowSettings(true); setSettingsView("crawler"); }}
+                        className="text-blue-600 hover:underline"
+                      >
+                        Index new pages to expand the search database
+                      </button>
+                    </li>
                   </ul>
                 </div>
               )}
@@ -360,7 +292,7 @@ export default function App() {
             </div>
 
             {/* ─── Knowledge Panel (right) ─── */}
-            {page === 0 && query && searchSource !== "local" && (
+            {page === 0 && query && (
               <div className="hidden xl:block w-[360px] flex-shrink-0 pt-1">
                 <KnowledgePanel query={query} />
               </div>

@@ -7,11 +7,11 @@ const api = axios.create({
   timeout: 15000,
 });
 
-/** Search documents — source: "local" | "wiki" | "all" */
-export const search = (q, page = 0, size = 10, source = "wiki") =>
-  api.get("/search", { params: { q, page, size, source } });
+/** Search documents with BM25 ranking (unified — all indexed pages) */
+export const search = (q, page = 0, size = 10) =>
+  api.get("/search", { params: { q, page, size } });
 
-/** Rich autocomplete — returns { local: string[], wiki: [{title,description,url}] } */
+/** Autocomplete suggestions from local Trie index */
 export const autocomplete = (prefix) =>
   api.get("/autocomplete", { params: { prefix } });
 
@@ -30,13 +30,9 @@ export const getAnalytics = () => api.get("/analytics");
 export const startCrawl = (url, domain) =>
   api.post("/crawl", null, { params: { url, domain } });
 
-/** Search Wikipedia directly */
-export const searchWiki = (q, page = 0, size = 10) =>
-  api.get("/wiki/search", { params: { q, page, size } });
-
-/** Get Wikipedia article summary */
-export const getWikiSummary = (title) =>
-  api.get("/wiki/summary", { params: { title } });
+/** Crawl and index Wikipedia articles for a topic */
+export const crawlWikipedia = (q, limit = 20) =>
+  api.post("/crawl/wikipedia", null, { params: { q, limit } });
 
 /** Health check */
 export const healthCheck = () => api.get("/health");

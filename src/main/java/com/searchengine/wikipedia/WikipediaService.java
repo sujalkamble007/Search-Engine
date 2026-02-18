@@ -36,6 +36,7 @@ public class WikipediaService {
     /**
      * Search Wikipedia for articles matching the query.
      * Returns a list of search results with title, snippet, URL, and page ID.
+     * Used by WebCrawler to discover articles for local indexing.
      */
     public List<Map<String, Object>> search(String query, int limit) {
         try {
@@ -71,7 +72,6 @@ public class WikipediaService {
                 results.add(result);
             }
 
-            // Get total hits
             int totalHits = root.path("query").path("searchinfo").path("totalhits").asInt();
             log.info("Wikipedia search for '{}': {} total hits, returning {}", query, totalHits, results.size());
 
@@ -85,6 +85,7 @@ public class WikipediaService {
     /**
      * Get the full summary of a Wikipedia article by title.
      * Uses the REST API for clean, formatted summaries.
+     * Used by the knowledge panel for sidebar enrichment.
      */
     public Map<String, Object> getArticleSummary(String title) {
         try {
@@ -121,168 +122,6 @@ public class WikipediaService {
         } catch (Exception e) {
             log.error("Failed to get Wikipedia summary for '{}': {}", title, e.getMessage());
             return Map.of("error", "Article not found");
-        }
-    }
-
-    /**
-     * Get the full article content (extract) with sections.
-     */
-    public Map<String, Object> getArticleContent(String title) {
-        try {
-            String encoded = URLEncoder.encode(title, StandardCharsets.UTF_8);
-            String url = WIKI_API + "?action=query&titles=" + encoded
-                    + "&prop=" + URLEncoder.encode("extracts|info|categories|links", StandardCharsets.UTF_8)
-                    + "&exintro=false&explaintext=true"
-                    + "&inprop=url"
-                    + "&cllimit=20&pllimit=20"
-                    + "&format=json&origin=*";
-
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(url))
-                    .header("User-Agent", "SearchEngine/1.0")
-                    .timeout(Duration.ofSeconds(15))
-                    .GET()
-                    .build();
-
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            JsonNode root = objectMapper.readTree(response.body());
-            JsonNode pages = root.path("query").path("pages");
-
-            Iterator<JsonNode> pageIterator = pages.elements();
-            if (!pageIterator.hasNext()) {
-                return Map.of("error", "Article not found");
-            }
-
-            JsonNode page = pageIterator.next();
-            Map<String, Object> article = new LinkedHashMap<>();
-            article.put("pageId", page.path("pageid").asLong());
-            article.put("title", page.path("title").asText());
-            article.put("content", page.path("extract").asText());
-            article.put("url", page.path("fullurl").asText());
-            article.put("lastEdited", page.path("touched").asText());
-
-            // Categories
-            List<String> categories = new ArrayList<>();
-            for (JsonNode cat : page.path("categories")) {
-                categories.add(cat.path("title").asText().replace("Category:", ""));
-            }
-            article.put("categories", categories);
-
-            // Related links
-            List<String> links = new ArrayList<>();
-            for (JsonNode link : page.path("links")) {
-                links.add(link.path("title").asText());
-            }
-            article.put("relatedLinks", links);
-
-            return article;
-        } catch (Exception e) {
-            log.error("Failed to get Wikipedia article '{}': {}", title, e.getMessage());
-            return Map.of("error", "Failed to fetch article");
-        }
-    }
-
-    /**
-     * Search and return total hit count from Wikipedia (for pagination).
-     */
-    public Map<String, Object> searchWithPagination(String query, int page, int size) {
-        try {
-            int offset = page * size;
-            String encoded = URLEncoder.encode(query, StandardCharsets.UTF_8);
-            String url = WIKI_API + "?action=query&list=search"
-                    + "&srsearch=" + encoded
-                    + "&srlimit=" + size
-                    + "&sroffset=" + offset
-                    + "&srprop=" + URLEncoder.encode("snippet|size|wordcount|timestamp", StandardCharsets.UTF_8)
-                    + "&format=json&origin=*";
-
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(url))
-                    .header("User-Agent", "SearchEngine/1.0")
-                    .timeout(Duration.ofSeconds(10))
-                    .GET()
-                    .build();
-
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            JsonNode root = objectMapper.readTree(response.body());
-            JsonNode searchResults = root.path("query").path("search");
-            int totalHits = root.path("query").path("searchinfo").path("totalhits").asInt();
-
-            List<Map<String, Object>> results = new ArrayList<>();
-            for (JsonNode item : searchResults) {
-                Map<String, Object> result = new LinkedHashMap<>();
-                String title = item.path("title").asText();
-                result.put("id", item.path("pageid").asLong());
-                result.put("title", title);
-                result.put("rawContent", cleanHtml(item.path("snippet").asText()));
-                result.put("url", "https://en.wikipedia.org/wiki/" + title.replace(" ", "_"));
-                result.put("wordCount", item.path("wordcount").asInt());
-                results.add(result);
-            }
-
-            int totalPages = (int) Math.ceil((double) totalHits / size);
-
-            Map<String, Object> response2 = new LinkedHashMap<>();
-            response2.put("results", results);
-            response2.put("totalHits", totalHits);
-            response2.put("page", page);
-            response2.put("totalPages", totalPages);
-            response2.put("source", "wikipedia");
-
-            return response2;
-        } catch (Exception e) {
-            log.error("Wikipedia search failed: {}", e.getMessage());
-            Map<String, Object> error = new LinkedHashMap<>();
-            error.put("results", List.of());
-            error.put("totalHits", 0);
-            error.put("page", page);
-            error.put("totalPages", 0);
-            error.put("source", "wikipedia");
-            return error;
-        }
-    }
-
-    /**
-     * Get autocomplete suggestions from Wikipedia using OpenSearch API.
-     * Returns list of {title, description, url}.
-     */
-    public List<Map<String, String>> opensearch(String query, int limit) {
-        try {
-            String encoded = URLEncoder.encode(query, StandardCharsets.UTF_8);
-            String url = WIKI_API + "?action=opensearch&search=" + encoded
-                    + "&limit=" + limit + "&namespace=0&format=json";
-
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(url))
-                    .header("User-Agent", "SearchEngine/1.0")
-                    .timeout(Duration.ofSeconds(5))
-                    .GET()
-                    .build();
-
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            JsonNode root = objectMapper.readTree(response.body());
-
-            List<Map<String, String>> results = new ArrayList<>();
-            JsonNode titles = root.get(1);
-            JsonNode descriptions = root.get(2);
-            JsonNode urls = root.get(3);
-
-            if (titles != null) {
-                for (int i = 0; i < titles.size(); i++) {
-                    Map<String, String> item = new LinkedHashMap<>();
-                    item.put("title", titles.get(i).asText());
-                    item.put("description", descriptions != null && i < descriptions.size()
-                            ? descriptions.get(i).asText() : "");
-                    item.put("url", urls != null && i < urls.size()
-                            ? urls.get(i).asText() : "");
-                    results.add(item);
-                }
-            }
-
-            return results;
-        } catch (Exception e) {
-            log.error("Wikipedia opensearch failed: {}", e.getMessage());
-            return List.of();
         }
     }
 
