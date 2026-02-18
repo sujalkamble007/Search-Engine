@@ -1,6 +1,6 @@
 # 🔍 MySearch Engine
 
-A **production-grade, full-stack search engine** built from scratch with **Java 21 / Spring Boot 3.4** and **React 18**. It features BFS web crawling, inverted-index construction, BM25 relevance ranking, Trie-based autocomplete, Wikipedia integration with Knowledge Panels, real-time analytics, and a pixel-perfect Google-inspired UI — all wired together with clean REST APIs and multi-environment configuration.
+A **production-grade, full-stack search engine** built from scratch with **Java 21 / Spring Boot 3.4** and **React 18**. It features a **unified indexing pipeline** that crawls both websites and Wikipedia articles into a single local database, ranks results with **BM25 relevance scoring**, provides **Trie-based autocomplete**, enriches results with **Wikipedia Knowledge Panels**, tracks real-time analytics, and presents everything in a pixel-perfect Google-inspired UI — all wired together with clean REST APIs and multi-environment configuration.
 
 ![Java](https://img.shields.io/badge/Java-21-orange?style=flat-square&logo=openjdk)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.1-green?style=flat-square&logo=springboot)
@@ -25,7 +25,7 @@ A **production-grade, full-stack search engine** built from scratch with **Java 
   - [2. Text Processing & Indexing](#2-text-processing--indexing)
   - [3. BM25 Search Ranking Algorithm](#3-bm25-search-ranking-algorithm)
   - [4. Trie Autocomplete](#4-trie-autocomplete)
-  - [5. Wikipedia Integration](#5-wikipedia-integration)
+  - [5. Wikipedia Crawling & Knowledge Panel](#5-wikipedia-crawling--knowledge-panel)
   - [6. Analytics Tracking](#6-analytics-tracking)
   - [7. Caching Strategy](#7-caching-strategy)
 - [Tech Stack](#-tech-stack)
@@ -35,11 +35,10 @@ A **production-grade, full-stack search engine** built from scratch with **Java 
   - [Running the Application](#running-the-application)
   - [Access Points](#access-points)
 - [API Documentation](#-api-documentation)
-  - [Search Endpoints](#search-endpoints)
+  - [Search Endpoint](#search-endpoint)
   - [Autocomplete Endpoint](#autocomplete-endpoint)
   - [Knowledge Panel Endpoint](#knowledge-panel-endpoint)
   - [Crawler Endpoints](#crawler-endpoints)
-  - [Wikipedia Endpoints](#wikipedia-endpoints)
   - [Analytics Endpoints](#analytics-endpoints)
   - [Utility Endpoints](#utility-endpoints)
 - [Project Structure](#-project-structure)
@@ -60,8 +59,10 @@ A **production-grade, full-stack search engine** built from scratch with **Java 
 
 ## ✨ Features
 
-### 🕷️ Web Crawler
-- **BFS traversal** starting from any seed URL
+### 🕷️ Unified Crawler (Websites + Wikipedia)
+- **BFS traversal** starting from any seed URL for website crawling
+- **Wikipedia article crawling** — search a topic and batch-index up to 50 Wikipedia articles into the local database
+- All content (web pages + Wikipedia) goes through the **same indexing pipeline** — tokenized, inverted-indexed, and searchable via one unified `/search` endpoint
 - Domain-boundary enforcement — stays within the target website
 - Configurable crawl delay (default 1 s) and page limit (default 100)
 - Polite crawling with custom `User-Agent` header
@@ -77,17 +78,15 @@ A **production-grade, full-stack search engine** built from scratch with **Java 
 
 ### ⌨️ Autocomplete
 - **Trie data structure** with O(k) prefix lookups (k = prefix length)
-- **Dual-source suggestions** — local Trie results + live Wikipedia OpenSearch
+- Suggestions come from the **unified local index** — all crawled content (websites + Wikipedia) feeds the Trie
 - Preloaded on startup from database (crawled tokens + past search queries)
 - Keyboard navigation (↑ ↓ Enter Escape) with highlighted active item
 - Debounced API calls (200 ms) to avoid excessive requests
 
 ### 🌐 Wikipedia Integration
-- **Full-text search** via Wikipedia MediaWiki API
-- **Knowledge Panel** — article summaries, descriptions, thumbnail/original images (via REST API)
-- **Full article content** with categories and related links
-- **OpenSearch suggestions** for autocomplete enrichment
-- Paginated Wikipedia search results with the same response format as local search
+- **Crawl & Index** — Wikipedia articles are fetched via the MediaWiki Search API, crawled with Jsoup, and indexed through the same pipeline as regular websites (tokenize → inverted index → Trie → BM25)
+- **Knowledge Panel** — article summaries, descriptions, thumbnail/original images (via Wikipedia REST API) displayed as a sidebar enrichment alongside search results
+- Wikipedia articles appear in search results **alongside web-crawled pages**, ranked together by BM25
 
 ### 📊 Analytics Dashboard
 - Track **top 10 most searched queries** (ranked by count)
@@ -97,7 +96,7 @@ A **production-grade, full-stack search engine** built from scratch with **Java 
 - Auto-refreshing dashboard (every 30 seconds)
 
 ### 🎨 Google-Inspired UI
-- **Home page** — centered logo, search bar, source pills, "I'm Feeling Lucky" button
+- **Home page** — centered logo, search bar, "Index New Pages" button
 - **Results page** — sticky header, breadcrumb URLs, highlighted query terms, word count badges
 - **Knowledge Panel** (right sidebar) — Wikipedia thumbnail + summary on first page
 - **Pagination** — Google-style colored "MySearch" letters + numbered page buttons
@@ -118,11 +117,11 @@ A **production-grade, full-stack search engine** built from scratch with **Java 
 
 | Page | Description |
 |------|-------------|
-| **Home** | Google-style centered layout with colorful "MySearch" logo, search bar, source selector pills (Wikipedia / Local Index / All), and action buttons |
-| **Search Results** | Sticky header with search bar, source tabs (All / Local Index), result count with timing, breadcrumb URLs, highlighted keywords, Wikipedia Knowledge Panel on the right |
+| **Home** | Google-style centered layout with colorful "MySearch" logo, search bar, "MySearch Search" and "Index New Pages" action buttons |
+| **Search Results** | Sticky header with search bar, result count with timing, breadcrumb URLs, highlighted keywords, Wikipedia Knowledge Panel sidebar on the right |
 | **Knowledge Panel** | Wikipedia article thumbnail, title, description, expandable extract, and source attribution |
 | **Analytics** | Two-column dashboard: Top Searched Queries (🔥) and Most Clicked Results (👆), plus 4 stat cards (Total Queries, Total Clicks, Unique Queries, Avg CTR) |
-| **Web Crawler** | Form to enter seed URL (auto-extracts domain), domain filter field, start button with loading spinner |
+| **Index Pages** | Two panels: (1) Wikipedia article indexer — enter a topic + number of articles; (2) Website crawler — enter seed URL with auto-extracted domain filter |
 
 ---
 
@@ -176,8 +175,8 @@ A **production-grade, full-stack search engine** built from scratch with **Java 
 │ AUTOCOMPLETE PIPELINE                                                   │
 │                                                                         │
 │  Prefix ──▶ Trie DFS (local suggestions, max 10)                       │
-│         ──▶ Wikipedia OpenSearch API (if prefix ≥ 2 chars)              │
-│         ──▶ Merged response { local: [...], wiki: [...] }              │
+│         ──▶ Return flat list of matching terms                          │
+│  (Trie is populated from all indexed content: websites + Wikipedia)     │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -188,23 +187,23 @@ A **production-grade, full-stack search engine** built from scratch with **Java 
 | `model/` | JPA entities: `Document`, `InvertedIndex`, `SearchQuery` |
 | `repository/` | Spring Data JPA interfaces with custom JPQL queries |
 | `config/` | CORS (`WebConfig`), Redis cache (`RedisConfig`), AWS S3 client (`AwsS3Config`) |
-| `crawler/` | `WebCrawler` (BFS engine) + `CrawlerService` (page processing orchestrator) |
+| `crawler/` | `WebCrawler` (BFS engine for websites + Wikipedia article crawler) + `CrawlerService` (page processing orchestrator) |
 | `indexer/` | `TextProcessor` (clean/tokenize/stop-words) + `IndexerService` (inverted index builder) |
 | `search/` | `BM25Scorer` (ranking algorithm) + `SearchService` (orchestration) + `SearchController` (REST API) |
 | `autocomplete/` | `TrieNode` (data structure) + `AutocompleteService` (insert/search/load from DB) |
-| `wikipedia/` | `WikipediaService` (MediaWiki + REST API client) + `WikipediaController` (REST endpoints) |
+| `wikipedia/` | `WikipediaService` (MediaWiki Search API for crawl discovery + REST Summary API for Knowledge Panel) |
 | `analytics/` | `AnalyticsService` (query/click logging) + `AnalyticsController` (REST endpoint) |
 
 ### Frontend Component Tree
 
 ```
 App.jsx (state management + routing between 3 views: Home / Results / Settings)
-├── SearchBar.jsx          — Input with dual autocomplete dropdown (local + Wikipedia)
+├── SearchBar.jsx          — Input with autocomplete dropdown from unified local Trie
 ├── SearchResults.jsx      — Result cards with breadcrumbs, title highlighting, snippets
 ├── KnowledgePanel.jsx     — Wikipedia summary sidebar with image + expandable extract
 ├── Pagination.jsx         — Google-style colored page navigation
 ├── AnalyticsDashboard.jsx — Top queries + top clicks tables + 4 stat cards (auto-refresh)
-└── CrawlerPanel.jsx       — Seed URL input form with domain auto-extraction
+└── CrawlerPanel.jsx       — Two panels: Wikipedia article indexer + Website crawler
 ```
 
 ---
@@ -229,7 +228,13 @@ While queue is not empty AND visited.size < MAX_PAGES (100):
     Thread.sleep(1000)                       // Polite 1-second delay
 ```
 
-The **`CrawlerService`** then processes each page through 5 stages:
+The **`WebCrawler`** also supports **Wikipedia article crawling** via `crawlWikipedia(query, limit)`:
+1. Calls `WikipediaService.search(query, limit)` to discover relevant article URLs
+2. For each article URL, uses Jsoup to fetch the full page
+3. Passes each page through the **exact same** `CrawlerService.processPage()` pipeline
+4. Result: Wikipedia articles are indexed identically to web pages — same DB table, same inverted index, same BM25 search
+
+The **`CrawlerService`** processes each page (web or Wikipedia) through these stages:
 1. **Deduplication** — Checks `docRepo.existsByUrl(url)` to skip already-indexed pages
 2. **Content extraction** — Extracts `<title>` and `<body>` text via Jsoup DOM traversal
 3. **Text cleaning** — Passes body text through `TextProcessor.clean()` → `tokenize()`
@@ -331,18 +336,20 @@ Example Trie storing: "java", "javascript", "json"
   2. All `Document` tokens (crawled content vocabulary, filtered to ≥ 3 chars)
   3. All `Document` titles (lowercased)
 
-### 5. Wikipedia Integration
+### 5. Wikipedia Crawling & Knowledge Panel
 
-**`WikipediaService`** uses Java's built-in `HttpClient` (Java 11+) to call four Wikipedia APIs:
+**`WikipediaService`** uses Java's built-in `HttpClient` (Java 11+) to call two Wikipedia APIs:
 
 | API | Endpoint | Purpose |
-|-----|----------|---------|
-| **MediaWiki Search** | `?action=query&list=search` | Full-text search with HTML snippets, word counts, timestamps |
-| **REST Summary** | `/api/rest_v1/page/summary/{title}` | Clean article extract, thumbnail, description for Knowledge Panel |
-| **MediaWiki Content** | `?action=query&prop=extracts\|info\|categories\|links` | Full article text, categories, related links |
-| **OpenSearch** | `?action=opensearch` | Autocomplete suggestions with descriptions and URLs |
+|-----|----------|--------|
+| **MediaWiki Search** | `?action=query&list=search` | Discover relevant articles for a topic — used by `WebCrawler.crawlWikipedia()` to find URLs to crawl and index locally |
+| **REST Summary** | `/api/rest_v1/page/summary/{title}` | Clean article extract, thumbnail, description — used by the **Knowledge Panel** sidebar enrichment |
 
-All HTTP responses are parsed with **Jackson `ObjectMapper`**. HTML snippets from search results are cleaned by stripping tags and decoding entities. Timeouts are set to 5-15 seconds with proper error handling.
+The Wikipedia integration serves two distinct purposes:
+1. **Crawl Discovery** — `search()` finds article URLs which are then fetched by Jsoup and indexed through the standard `CrawlerService.processPage()` pipeline. After indexing, these articles live in the local database and are searched via BM25 like any other page.
+2. **Knowledge Panel Enrichment** — `getArticleSummary()` fetches a rich summary (title, extract, thumbnail, description) shown as a sidebar alongside search results. This is a **live API call** for display only, not indexed.
+
+All HTTP responses are parsed with **Jackson `ObjectMapper`**. HTML snippets are cleaned by stripping tags and decoding entities. Timeouts are set to 10 seconds with proper error handling.
 
 ### 6. Analytics Tracking
 
@@ -507,18 +514,17 @@ java -jar build/libs/demo-0.0.1-SNAPSHOT.jar \
 
 ## 📚 API Documentation
 
-### Search Endpoints
+### Search Endpoint
 
 #### `GET /api/search` — Search Documents
 
-Search across the local crawled index or Wikipedia with BM25 ranking and pagination.
+Search across the unified local index (all crawled pages — websites + Wikipedia articles) with BM25 ranking and pagination.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `q` | string | **required** | Search query |
 | `page` | int | `0` | Page number (0-indexed) |
 | `size` | int | `10` | Results per page |
-| `source` | string | `all` | `"local"` = crawled data only, `"wiki"` = Wikipedia only, `"all"` = both |
 
 **Response (200 OK):**
 ```json
@@ -541,33 +547,24 @@ Search across the local crawled index or Wikipedia with BM25 ranking and paginat
 
 **Example:**
 ```bash
-curl "http://localhost:8080/api/search?q=java+programming&page=0&size=10&source=wiki"
+curl "http://localhost:8080/api/search?q=java+programming&page=0&size=10"
 ```
 
 ---
 
 ### Autocomplete Endpoint
 
-#### `GET /api/autocomplete` — Get Dual-Source Suggestions
+#### `GET /api/autocomplete` — Get Suggestions
 
-Returns both local Trie matches and Wikipedia OpenSearch suggestions.
+Returns autocomplete suggestions from the local Trie (populated from all indexed content — websites + Wikipedia articles).
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `prefix` | string | Prefix to search (Wikipedia suggestions require ≥ 2 chars) |
+| `prefix` | string | Prefix to search (minimum 2 characters recommended) |
 
 **Response (200 OK):**
 ```json
-{
-  "local": ["javascript", "java", "javafx"],
-  "wiki": [
-    {
-      "title": "Java (programming language)",
-      "description": "Object-oriented programming language",
-      "url": "https://en.wikipedia.org/wiki/Java_(programming_language)"
-    }
-  ]
-}
+["javascript", "java", "javafx", "jackson"]
 ```
 
 ---
@@ -617,33 +614,29 @@ Starts a background crawl from a seed URL. Returns immediately; crawling runs as
 curl -X POST "http://localhost:8080/api/crawl?url=https://example.com&domain=example.com"
 ```
 
----
+#### `POST /api/crawl/wikipedia` — Index Wikipedia Articles
 
-### Wikipedia Endpoints
-
-#### `GET /api/wiki/search` — Search Wikipedia Directly
+Searches Wikipedia for articles matching a topic, then crawls and indexes each one into the local database through the same pipeline as website crawling. Returns immediately; indexing runs asynchronously.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `q` | string | **required** | Search query |
-| `page` | int | `0` | Page number (0-indexed) |
-| `size` | int | `10` | Results per page |
+| `q` | string | **required** | Topic to search Wikipedia for |
+| `limit` | int | `20` | Max number of articles to fetch and index (1–50) |
 
-**Response:** Same format as `/api/search` with `"source": "wikipedia"` field added.
+**Response (200 OK):**
+```json
+{
+  "message": "Started indexing Wikipedia articles for: Java programming",
+  "articlesRequested": 20
+}
+```
 
-#### `GET /api/wiki/summary` — Article Summary
+**Example:**
+```bash
+curl -X POST "http://localhost:8080/api/crawl/wikipedia?q=machine+learning&limit=25"
+```
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `title` | string | Wikipedia article title (e.g., `Java_(programming_language)`) |
-
-#### `GET /api/wiki/article` — Full Article Content
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `title` | string | Wikipedia article title |
-
-**Response includes:** full extract text, categories, related links, page ID, URL, last edited timestamp.
+> After indexing completes, the Wikipedia articles are searchable via the regular `/api/search` endpoint, ranked by BM25 alongside any web-crawled pages.
 
 ---
 
@@ -716,8 +709,8 @@ Search-Engine/
 │   │   │   │   ├── RedisConfig.java          #   Redis cache config (@Profile("redis") only)
 │   │   │   │   └── AwsS3Config.java          #   S3Client bean (conditional on aws.s3.enabled=true)
 │   │   │   │
-│   │   │   ├── crawler/                      # ── Web Crawling Module ───────────────────
-│   │   │   │   ├── WebCrawler.java           #   BFS engine: queue + visited set + domain filter
+│   │   │   ├── crawler/                      # ── Unified Crawling Module ──────────────
+│   │   │   │   ├── WebCrawler.java           #   BFS website crawler + Wikipedia article crawler
 │   │   │   │   └── CrawlerService.java       #   Process page: extract → clean → index → S3 → Trie
 │   │   │   │
 │   │   │   ├── indexer/                      # ── Text Processing & Indexing ─────────────
@@ -727,15 +720,14 @@ Search-Engine/
 │   │   │   ├── search/                       # ── Search Engine Core ─────────────────────
 │   │   │   │   ├── BM25Scorer.java           #   Okapi BM25: IDF × TF scoring with k₁=1.5, b=0.75
 │   │   │   │   ├── SearchService.java        #   Orchestrate: tokenize → score → paginate → cache → log
-│   │   │   │   └── SearchController.java     #   REST: /search, /autocomplete, /knowledge, /crawl, /click, /health
+│   │   │   │   └── SearchController.java     #   REST: /search, /autocomplete, /knowledge, /crawl, /crawl/wikipedia, /click, /health
 │   │   │   │
 │   │   │   ├── autocomplete/                 # ── Autocomplete Module ────────────────────
 │   │   │   │   ├── TrieNode.java             #   Node: Map<Character, TrieNode> + isEndOfWord flag
 │   │   │   │   └── AutocompleteService.java  #   Insert, DFS search, @PostConstruct DB preloading
 │   │   │   │
 │   │   │   ├── wikipedia/                    # ── Wikipedia Integration ───────────────────
-│   │   │   │   ├── WikipediaService.java     #   search(), getArticleSummary(), getArticleContent(), opensearch()
-│   │   │   │   └── WikipediaController.java  #   REST: /wiki/search, /wiki/summary, /wiki/article
+│   │   │   │   └── WikipediaService.java     #   search() for crawl discovery + getArticleSummary() for Knowledge Panel
 │   │   │   │
 │   │   │   └── analytics/                    # ── Analytics Module ────────────────────────
 │   │   │       ├── AnalyticsService.java     #   logQuery(), logClick(), getAnalytics()
@@ -763,14 +755,14 @@ Search-Engine/
 │       ├── App.jsx                           # Main app: state management, 3 views (Home/Results/Settings)
 │       ├── index.css                         # Tailwind imports + custom animations (shimmer, fade-in)
 │       ├── api/
-│       │   └── searchApi.js                  # Axios instance + all API wrapper functions
+│       │   └── searchApi.js                  # Axios instance + unified API wrappers (search, autocomplete, crawl, crawlWikipedia)
 │       └── components/
-│           ├── SearchBar.jsx                 # Search input + dual dropdown (local + wiki) + keyboard nav
+│           ├── SearchBar.jsx                 # Search input + autocomplete dropdown (unified local Trie) + keyboard nav
 │           ├── SearchResults.jsx             # Result cards: favicon, breadcrumb URL, highlighted snippets
 │           ├── KnowledgePanel.jsx            # Wikipedia sidebar: thumbnail, extract, expandable text
 │           ├── Pagination.jsx                # Google-style: colored logo + numbered buttons + prev/next
 │           ├── AnalyticsDashboard.jsx        # Tables: top queries & clicks, 4 stat cards, 30s auto-refresh
-│           └── CrawlerPanel.jsx              # Form: seed URL (auto-extracts domain), start button
+│           └── CrawlerPanel.jsx              # Two panels: Wikipedia article indexer + website crawler
 │
 ├── database/
 │   ├── schema.sql                            # PostgreSQL DDL: 3 tables + 8 indexes
