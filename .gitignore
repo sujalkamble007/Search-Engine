@@ -65,3 +65,4 @@ frontend/.vite/
 tmp/
 temp/
 *.tmp
+.vite/

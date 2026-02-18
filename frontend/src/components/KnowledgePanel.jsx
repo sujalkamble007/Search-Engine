@@ -22,12 +22,15 @@ export default function KnowledgePanel({ query }) {
 
   if (loading) {
     return (
-      <div className="rounded-xl border border-gray-200 overflow-hidden">
-        <div className="h-48 shimmer" />
+      <div
+        className="rounded-lg overflow-hidden"
+        style={{ border: "1px solid var(--border-primary)" }}
+      >
+        <div className="h-44 shimmer" />
         <div className="p-5 space-y-3">
-          <div className="h-6 w-3/4 shimmer rounded" />
+          <div className="h-5 w-3/4 shimmer rounded" />
           <div className="h-4 w-1/2 shimmer rounded" />
-          <div className="h-20 shimmer rounded" />
+          <div className="h-16 shimmer rounded" />
         </div>
       </div>
     );
@@ -37,17 +40,26 @@ export default function KnowledgePanel({ query }) {
 
   const extract = data.extract || "";
   const shortExtract =
-    extract.length > 350 ? extract.substring(0, 350) + "..." : extract;
+    extract.length > 300 ? extract.substring(0, 300) + "…" : extract;
 
   return (
-    <div className="rounded-xl border border-gray-200 overflow-hidden fade-in">
+    <div
+      className="rounded-lg overflow-hidden fade-in"
+      style={{
+        border: "1px solid var(--border-primary)",
+        background: "var(--bg-card)",
+      }}
+    >
       {/* Image */}
       {data.thumbnail && (
-        <div className="w-full bg-gray-50 flex items-center justify-center p-4">
+        <div
+          className="w-full flex items-center justify-center p-6"
+          style={{ background: "var(--bg-secondary)" }}
+        >
           <img
             src={data.thumbnail}
             alt={data.title}
-            className="max-h-56 rounded-lg object-contain"
+            className="max-h-48 rounded object-contain"
             onError={(e) => {
               e.target.parentElement.style.display = "none";
             }}
@@ -57,58 +69,67 @@ export default function KnowledgePanel({ query }) {
 
       {/* Content */}
       <div className="p-5">
-        <h3 className="text-xl font-medium text-gray-900 mb-0.5">
+        <h3
+          className="font-display text-xl italic mb-0.5"
+          style={{ color: "var(--text-primary)" }}
+        >
           {data.title}
         </h3>
+
         {data.description && (
-          <p className="text-sm text-gray-500 mb-3 capitalize">
+          <p
+            className="text-[12px] font-mono uppercase tracking-wider mb-3"
+            style={{ color: "var(--text-tertiary)" }}
+          >
             {data.description}
           </p>
         )}
 
-        <p className="text-sm text-[#4d5156] leading-relaxed">
+        <p className="text-[13px] leading-[1.8]" style={{ color: "var(--text-secondary)" }}>
           {expanded ? extract : shortExtract}
         </p>
 
-        {extract.length > 350 && (
+        {extract.length > 300 && (
           <button
             onClick={(e) => {
               e.stopPropagation();
               setExpanded(!expanded);
             }}
-            className="text-blue-600 text-sm mt-2 hover:underline"
+            className="text-[12px] font-mono mt-2 transition-opacity hover:opacity-60"
+            style={{ color: "var(--accent)" }}
           >
-            {expanded ? "Show less" : "More"}
+            {expanded ? "— less" : "+ more"}
           </button>
         )}
 
-        {/* Wikipedia link */}
+        {/* Link */}
         {data.url && (
           <a
             href={data.url}
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
-            className="mt-4 inline-flex items-center gap-1.5 text-sm text-blue-700 hover:underline"
+            className="mt-4 inline-flex items-center gap-1.5 text-[12px] font-mono transition-opacity hover:opacity-60"
+            style={{ color: "var(--link)" }}
           >
-            Wikipedia
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-            </svg>
+            wikipedia ↗
           </a>
         )}
       </div>
 
       {/* Footer */}
-      <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex items-center gap-2">
-        <img
-          src="https://en.wikipedia.org/static/favicon/wikipedia.ico"
-          className="w-4 h-4"
-          alt=""
-        />
-        <span className="text-xs text-gray-400">
-          Data from Wikipedia, the free encyclopedia
+      <div
+        className="px-5 py-3 flex items-center gap-2"
+        style={{
+          background: "var(--bg-secondary)",
+          borderTop: "1px solid var(--border-secondary)",
+        }}
+      >
+        <span
+          className="text-[10px] font-mono tracking-wider uppercase"
+          style={{ color: "var(--text-muted)" }}
+        >
+          source: wikipedia
         </span>
       </div>
     </div>

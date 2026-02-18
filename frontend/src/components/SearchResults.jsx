@@ -9,15 +9,26 @@ export default function SearchResults({ results, onResultClick, query }) {
     const regex = new RegExp(`(${escaped.join("|")})`, "gi");
     return text.split(regex).map((part, i) =>
       terms.some((t) => part.toLowerCase() === t) ? (
-        <strong key={i} className="font-bold">{part}</strong>
+        <mark
+          key={i}
+          style={{
+            background: "var(--accent-subtle)",
+            color: "var(--accent)",
+            padding: "0 2px",
+            borderRadius: "2px",
+            fontWeight: 600,
+          }}
+        >
+          {part}
+        </mark>
       ) : (
         part
       )
     );
   };
 
-  const truncate = (t, max = 260) =>
-    !t ? "" : t.length <= max ? t : t.substring(0, max).trim() + " ...";
+  const truncate = (t, max = 280) =>
+    !t ? "" : t.length <= max ? t : t.substring(0, max).trim() + "…";
 
   const getBreadcrumb = (url) => {
     try {
@@ -35,34 +46,38 @@ export default function SearchResults({ results, onResultClick, query }) {
   };
 
   return (
-    <div className="space-y-7 fade-in">
-      {results.map((doc) => {
+    <div className="space-y-8 fade-in">
+      {results.map((doc, idx) => {
         const crumbs = getBreadcrumb(doc.url);
         const isWiki = doc.url?.includes("wikipedia.org");
 
         return (
           <article
             key={doc.id}
-            className="result-link group cursor-pointer max-w-[600px]"
+            className="result-link group cursor-pointer max-w-[580px] transition-opacity hover:opacity-80"
             onClick={() => onResultClick(doc)}
+            style={{ animationDelay: `${idx * 40}ms` }}
           >
-            {/* Breadcrumb URL */}
-            <div className="flex items-center gap-1.5 mb-0.5">
-              {isWiki ? (
-                <img
-                  src="https://en.wikipedia.org/static/favicon/wikipedia.ico"
-                  className="w-7 h-7 rounded-full bg-white p-0.5 border border-gray-100"
-                  alt=""
-                />
-              ) : (
-                <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-500">
-                  {crumbs[0]?.[0]?.toUpperCase() || "?"}
-                </div>
-              )}
-              <div className="text-sm text-gray-700 truncate">
+            {/* Breadcrumb */}
+            <div className="flex items-center gap-2 mb-1.5">
+              <div
+                className="w-5 h-5 rounded flex items-center justify-center text-[10px] font-mono flex-shrink-0"
+                style={{
+                  background: isWiki ? "var(--bg-tertiary)" : "var(--bg-secondary)",
+                  color: "var(--text-tertiary)",
+                }}
+              >
+                {isWiki ? "W" : crumbs[0]?.[0]?.toUpperCase() || "?"}
+              </div>
+              <div
+                className="text-[12px] font-mono truncate"
+                style={{ color: "var(--text-tertiary)" }}
+              >
                 {crumbs.map((c, i) => (
                   <span key={i}>
-                    {i > 0 && <span className="mx-1 text-gray-400">›</span>}
+                    {i > 0 && (
+                      <span style={{ color: "var(--text-muted)", margin: "0 4px" }}>/</span>
+                    )}
                     {c}
                   </span>
                 ))}
@@ -70,15 +85,18 @@ export default function SearchResults({ results, onResultClick, query }) {
             </div>
 
             {/* Title */}
-            <h3 className="text-xl leading-snug text-[#1a0dab] group-hover:underline decoration-2 underline-offset-2 mb-0.5">
+            <h3
+              className="text-[17px] leading-snug font-medium mb-1 group-hover:underline decoration-1 underline-offset-2"
+              style={{ color: "var(--link)" }}
+            >
               {doc.title || "Untitled"}
             </h3>
 
             {/* Snippet */}
-            <p className="text-sm text-[#4d5156] leading-[1.58] line-clamp-3">
+            <p className="text-[13px] leading-[1.7]" style={{ color: "var(--text-secondary)" }}>
               {doc.wordCount > 0 && (
-                <span className="text-gray-500 mr-1">
-                  {doc.wordCount.toLocaleString()} words —
+                <span className="font-mono text-[11px] mr-1.5" style={{ color: "var(--text-muted)" }}>
+                  {doc.wordCount.toLocaleString()} words ·
                 </span>
               )}
               {highlightText(truncate(doc.rawContent, 300), query)}

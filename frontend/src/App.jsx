@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import SearchBar from "./components/SearchBar";
 import SearchResults from "./components/SearchResults";
 import KnowledgePanel from "./components/KnowledgePanel";
@@ -18,10 +18,21 @@ export default function App() {
   const [searchTime, setSearchTime] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const [settingsView, setSettingsView] = useState(null);
+  const [theme, setTheme] = useState(() =>
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light"
+  );
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
+
+  const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
 
   const handleSearch = useCallback(async (q, p = 0) => {
     if (!q.trim()) return;
-
     setLoading(true);
     setQuery(q);
     setPage(p);
@@ -64,129 +75,156 @@ export default function App() {
     setSettingsView(null);
   };
 
-  // ───────────── LOGO COMPONENT ─────────────
-  const Logo = ({ size = "text-2xl" }) => (
-    <button onClick={goHome} className={`${size} font-bold tracking-tight select-none`}>
-      <span className="text-[#4285f4]">M</span>
-      <span className="text-[#ea4335]">y</span>
-      <span className="text-[#fbbc05]">S</span>
-      <span className="text-[#4285f4]">e</span>
-      <span className="text-[#34a853]">a</span>
-      <span className="text-[#ea4335]">r</span>
-      <span className="text-[#4285f4]">c</span>
-      <span className="text-[#fbbc05]">h</span>
+  // ─── Theme Toggle Button ───
+  const ThemeToggle = ({ className = "" }) => (
+    <button
+      onClick={toggleTheme}
+      className={`w-8 h-8 rounded-full flex items-center justify-center
+        hover:opacity-70 transition-opacity ${className}`}
+      title={theme === "dark" ? "Switch to light" : "Switch to dark"}
+    >
+      {theme === "dark" ? (
+        <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="5" />
+          <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+        </svg>
+      ) : (
+        <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+        </svg>
+      )}
+    </button>
+  );
+
+  // ─── Logo ───
+  const Logo = ({ size = "text-xl" }) => (
+    <button
+      onClick={goHome}
+      className={`font-display ${size} tracking-tight select-none
+        hover:opacity-70 transition-opacity italic`}
+      style={{ color: "var(--text-primary)" }}
+    >
+      seek<span style={{ color: "var(--accent)" }}>.</span>
     </button>
   );
 
   // ═══════════════════════════════════════════
-  //   HOME PAGE — Google-like centered search
+  //   HOME — Minimal centered layout
   // ═══════════════════════════════════════════
   if (!searched && !showSettings) {
     return (
-      <div className="min-h-screen flex flex-col">
-        {/* Top-right nav */}
-        <div className="flex justify-end items-center gap-3 px-4 py-3 text-sm">
+      <div
+        className="min-h-screen flex flex-col theme-transition"
+        style={{ background: "var(--bg-primary)" }}
+      >
+        {/* Top bar */}
+        <nav className="flex justify-end items-center gap-2 px-6 py-4">
           <button
             onClick={() => { setShowSettings(true); setSettingsView("crawler"); }}
-            className="text-gray-700 hover:underline"
+            className="text-[13px] font-mono px-3 py-1.5 rounded-md transition-colors"
+            style={{ color: "var(--text-secondary)" }}
+            onMouseEnter={(e) => e.target.style.background = "var(--bg-secondary)"}
+            onMouseLeave={(e) => e.target.style.background = "transparent"}
           >
-            Index Pages
+            index
           </button>
           <button
             onClick={() => { setShowSettings(true); setSettingsView("analytics"); }}
-            className="text-gray-700 hover:underline"
+            className="text-[13px] font-mono px-3 py-1.5 rounded-md transition-colors"
+            style={{ color: "var(--text-secondary)" }}
+            onMouseEnter={(e) => e.target.style.background = "var(--bg-secondary)"}
+            onMouseLeave={(e) => e.target.style.background = "transparent"}
           >
-            Analytics
+            analytics
           </button>
-          <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-medium text-sm">
-            S
-          </div>
-        </div>
+          <ThemeToggle />
+        </nav>
 
-        {/* Centered content */}
-        <div className="flex-1 flex flex-col items-center pt-[22vh]">
+        {/* Center */}
+        <div className="flex-1 flex flex-col items-center justify-center -mt-20 px-6">
           {/* Logo */}
-          <Logo size="text-[88px]" />
+          <h1 className="font-display text-[clamp(64px,12vw,120px)] leading-none tracking-tight select-none italic mb-2">
+            <span style={{ color: "var(--text-primary)" }}>seek</span>
+            <span style={{ color: "var(--accent)" }}>.</span>
+          </h1>
 
-          {/* Search Bar */}
-          <div className="w-full max-w-[584px] mt-8 px-4">
+          <p
+            className="font-mono text-[11px] tracking-[0.3em] uppercase mb-10"
+            style={{ color: "var(--text-tertiary)" }}
+          >
+            find what matters
+          </p>
+
+          {/* Search */}
+          <div className="w-full max-w-[540px]">
             <SearchBar onSearch={handleSearch} initialQuery="" isHome />
           </div>
 
-          {/* Buttons */}
-          <div className="flex justify-center gap-3 mt-8">
-            <button
-              onClick={() => query && handleSearch(query)}
-              className="px-5 py-2 bg-[#f8f9fa] text-sm text-gray-700 rounded
-                         border border-[#f8f9fa] hover:border-gray-300 hover:shadow-sm transition-all"
-            >
-              MySearch Search
-            </button>
+          {/* Subtle hint */}
+          <div
+            className="flex items-center gap-6 mt-8 text-[12px] font-mono"
+            style={{ color: "var(--text-muted)" }}
+          >
+            <span>↵ search</span>
+            <span>·</span>
             <button
               onClick={() => { setShowSettings(true); setSettingsView("crawler"); }}
-              className="px-5 py-2 bg-[#f8f9fa] text-sm text-gray-700 rounded
-                         border border-[#f8f9fa] hover:border-gray-300 hover:shadow-sm transition-all"
+              className="hover:opacity-70 transition-opacity"
+              style={{ color: "var(--accent)" }}
             >
-              Index New Pages
+              + index pages
             </button>
           </div>
         </div>
 
         {/* Footer */}
-        <footer className="bg-[#f2f2f2] border-t border-gray-200 text-sm text-gray-600">
-          <div className="px-6 py-3 border-b border-gray-300">India</div>
-          <div className="px-6 py-3 flex flex-col sm:flex-row justify-between gap-2">
-            <div className="flex gap-6">
-              <span>Built with Spring Boot & React</span>
-            </div>
-            <div className="flex gap-6">
-              <button
-                onClick={() => { setShowSettings(true); setSettingsView("analytics"); }}
-                className="hover:underline"
-              >
-                Analytics
-              </button>
-              <button
-                onClick={() => { setShowSettings(true); setSettingsView("crawler"); }}
-                className="hover:underline"
-              >
-                Crawler
-              </button>
-            </div>
-          </div>
+        <footer
+          className="py-4 text-center text-[11px] font-mono"
+          style={{ color: "var(--text-muted)" }}
+        >
+          built with care · spring boot & react
         </footer>
       </div>
     );
   }
 
   // ═══════════════════════════════════════════
-  //   SETTINGS PAGE (Analytics / Crawler)
+  //   SETTINGS (Analytics / Crawler)
   // ═══════════════════════════════════════════
   if (showSettings) {
     return (
-      <div className="min-h-screen bg-white">
-        <header className="border-b border-gray-200 px-6 py-3 flex items-center gap-6">
+      <div className="min-h-screen theme-transition" style={{ background: "var(--bg-primary)" }}>
+        <header
+          className="sticky top-0 z-50 px-6 py-3 flex items-center gap-6 theme-transition"
+          style={{
+            background: "var(--bg-primary)",
+            borderBottom: "1px solid var(--border-primary)",
+          }}
+        >
           <Logo />
-          <div className="flex gap-1">
+          <div className="flex gap-0.5 font-mono text-[13px]">
             {[
-              { key: "analytics", label: "📊 Analytics" },
-              { key: "crawler", label: "📚 Index Pages" },
+              { key: "analytics", label: "analytics" },
+              { key: "crawler", label: "index" },
             ].map(({ key, label }) => (
               <button
                 key={key}
                 onClick={() => setSettingsView(key)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors
-                  ${settingsView === key
-                    ? "bg-blue-50 text-blue-700"
-                    : "text-gray-600 hover:bg-gray-50"
-                  }`}
+                className="px-3 py-1.5 rounded-md transition-colors"
+                style={{
+                  background: settingsView === key ? "var(--accent-subtle)" : "transparent",
+                  color: settingsView === key ? "var(--accent)" : "var(--text-secondary)",
+                }}
               >
                 {label}
               </button>
             ))}
           </div>
+          <div className="flex-1" />
+          <ThemeToggle />
         </header>
-        <main className="max-w-4xl mx-auto py-6 px-6">
+
+        <main className="max-w-3xl mx-auto py-8 px-6">
           {settingsView === "analytics" && <AnalyticsDashboard />}
           {settingsView === "crawler" && <CrawlerPanel />}
         </main>
@@ -195,60 +233,77 @@ export default function App() {
   }
 
   // ═══════════════════════════════════════════
-  //   RESULTS PAGE — Google-like layout
+  //   RESULTS — Clean, editorial layout
   // ═══════════════════════════════════════════
   return (
-    <div className="min-h-screen bg-white">
-      {/* ─── Header ─── */}
-      <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
-        <div className="flex items-center gap-5 px-5 py-3">
-          <Logo />
-          <div className="flex-1 max-w-2xl">
+    <div className="min-h-screen theme-transition" style={{ background: "var(--bg-primary)" }}>
+      {/* Header */}
+      <header
+        className="sticky top-0 z-50 theme-transition"
+        style={{
+          background: "var(--bg-primary)",
+          borderBottom: "1px solid var(--border-primary)",
+        }}
+      >
+        <div className="flex items-center gap-5 px-6 py-3 max-w-[1200px] mx-auto">
+          <Logo size="text-2xl" />
+          <div className="flex-1 max-w-xl">
             <SearchBar onSearch={handleSearch} initialQuery={query} isHome={false} />
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
             <button
               onClick={() => { setShowSettings(true); setSettingsView("analytics"); }}
-              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+              className="p-2 rounded-md transition-colors"
               title="Analytics"
+              onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-secondary)"}
+              onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
             >
-              <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                      d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              <svg className="w-[18px] h-[18px]" style={{ color: "var(--text-tertiary)" }} fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                <path d="M3 3v18h18M7 16v-3M11 16V9M15 16v-5M19 16V7" strokeLinecap="round" />
               </svg>
             </button>
             <button
               onClick={() => { setShowSettings(true); setSettingsView("crawler"); }}
-              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+              className="p-2 rounded-md transition-colors"
               title="Index Pages"
+              onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-secondary)"}
+              onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
             >
-              <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                      d="M13 10V3L4 14h7v7l9-11h-7z" />
+              <svg className="w-[18px] h-[18px]" style={{ color: "var(--text-tertiary)" }} fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                <path d="M12 4v16m-8-8h16" strokeLinecap="round" />
               </svg>
             </button>
+            <ThemeToggle />
           </div>
         </div>
       </header>
 
-      {/* ─── Main ─── */}
-      <main className="max-w-[1200px] mx-auto px-5 pt-5 pb-10">
-        {/* Stats */}
+      {/* Main */}
+      <main className="max-w-[1100px] mx-auto px-6 pt-6 pb-16">
+        {/* Stats bar */}
         {!loading && totalHits > 0 && (
-          <p className="text-sm text-gray-500 mb-4 pl-[146px]">
-            About {totalHits.toLocaleString()} results ({searchTime} seconds)
+          <p
+            className="text-[12px] font-mono mb-6"
+            style={{ color: "var(--text-tertiary)" }}
+          >
+            {totalHits.toLocaleString()} results · {searchTime}s
           </p>
         )}
 
         {loading ? (
-          <div className="flex items-center gap-3 py-16 pl-[146px]">
-            <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full" />
-            <span className="text-gray-500">Searching…</span>
+          <div className="flex items-center gap-3 py-20">
+            <div
+              className="w-4 h-4 rounded-full animate-pulse"
+              style={{ background: "var(--accent)" }}
+            />
+            <span className="font-mono text-sm" style={{ color: "var(--text-tertiary)" }}>
+              searching…
+            </span>
           </div>
         ) : (
-          <div className="flex gap-14">
-            {/* ─── Results column ─── */}
-            <div className="flex-1 pl-[146px] min-w-0">
+          <div className="flex gap-16">
+            {/* Results column */}
+            <div className="flex-1 min-w-0">
               <SearchResults
                 results={results}
                 onResultClick={handleResultClick}
@@ -257,22 +312,24 @@ export default function App() {
 
               {/* No results */}
               {searched && results.length === 0 && (
-                <div className="py-10">
-                  <p className="text-gray-800 mb-2">
-                    Your search – <strong>{query}</strong> – did not match any
-                    documents.
+                <div className="py-16 fade-in">
+                  <p className="font-display text-2xl italic mb-3" style={{ color: "var(--text-primary)" }}>
+                    Nothing found for "<span style={{ color: "var(--accent)" }}>{query}</span>"
                   </p>
-                  <p className="text-sm text-gray-500 mt-4 mb-2">Suggestions:</p>
-                  <ul className="text-sm text-gray-500 list-disc pl-5 space-y-1">
-                    <li>Make sure all words are spelled correctly.</li>
-                    <li>Try different keywords.</li>
-                    <li>Try more general keywords.</li>
+                  <ul
+                    className="text-sm space-y-1.5 mt-4"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
+                    <li>· Check your spelling</li>
+                    <li>· Try broader keywords</li>
                     <li>
+                      ·{" "}
                       <button
                         onClick={() => { setShowSettings(true); setSettingsView("crawler"); }}
-                        className="text-blue-600 hover:underline"
+                        className="transition-opacity hover:opacity-70"
+                        style={{ color: "var(--accent)" }}
                       >
-                        Index new pages to expand the search database
+                        Index new pages to expand the database
                       </button>
                     </li>
                   </ul>
@@ -281,7 +338,7 @@ export default function App() {
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="mt-10">
+                <div className="mt-12">
                   <Pagination
                     page={page}
                     totalPages={totalPages}
@@ -291,9 +348,9 @@ export default function App() {
               )}
             </div>
 
-            {/* ─── Knowledge Panel (right) ─── */}
+            {/* Knowledge Panel */}
             {page === 0 && query && (
-              <div className="hidden xl:block w-[360px] flex-shrink-0 pt-1">
+              <div className="hidden xl:block w-[320px] flex-shrink-0">
                 <KnowledgePanel query={query} />
               </div>
             )}

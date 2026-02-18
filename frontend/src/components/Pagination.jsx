@@ -13,40 +13,30 @@ export default function Pagination({ page, totalPages, onPageChange }) {
 
   const pageNumbers = getPageNumbers();
 
-  // Google-style colored letters for the logo
-  const letters = [
-    { ch: "M", color: "#4285f4" },
-    { ch: "y", color: "#ea4335" },
-    { ch: "S", color: "#fbbc05" },
-    { ch: "e", color: "#4285f4" },
-    { ch: "a", color: "#34a853" },
-    { ch: "r", color: "#ea4335" },
-    { ch: "c", color: "#4285f4" },
-    { ch: "h", color: "#fbbc05" },
-  ];
-
   return (
     <div className="flex flex-col items-center gap-4">
-      {/* Google-style logo letters as dots */}
-      <div className="flex items-end gap-[3px]">
-        {letters.map(({ ch, color }, i) => (
-          <span key={i} className="text-xl font-bold" style={{ color }}>
-            {ch}
-          </span>
+      {/* Decorative dots */}
+      <div className="flex items-center gap-1">
+        {[...Array(Math.min(totalPages, 5))].map((_, i) => (
+          <div
+            key={i}
+            className="w-1.5 h-1.5 rounded-full"
+            style={{
+              background: i === Math.min(page, 4) ? "var(--accent)" : "var(--border-primary)",
+            }}
+          />
         ))}
       </div>
 
-      <div className="flex items-center gap-0">
+      <div className="flex items-center gap-0 font-mono text-[13px]">
         {/* Previous */}
         {page > 0 && (
           <button
             onClick={() => onPageChange(page - 1)}
-            className="flex items-center gap-1 px-4 py-2 text-sm text-[#1a73e8] hover:underline"
+            className="flex items-center gap-1.5 px-3 py-2 transition-opacity hover:opacity-60"
+            style={{ color: "var(--accent)" }}
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            Previous
+            ← prev
           </button>
         )}
 
@@ -55,11 +45,18 @@ export default function Pagination({ page, totalPages, onPageChange }) {
           <button
             key={pn}
             onClick={() => onPageChange(pn)}
-            className={`w-10 h-10 flex items-center justify-center text-sm rounded-full transition-colors
-              ${pn === page
-                ? "text-gray-900 font-bold underline decoration-[#1a73e8] decoration-2 underline-offset-4"
-                : "text-[#1a73e8] hover:underline"
-              }`}
+            className="w-9 h-9 flex items-center justify-center rounded-md transition-colors"
+            style={{
+              background: pn === page ? "var(--accent-subtle)" : "transparent",
+              color: pn === page ? "var(--accent)" : "var(--text-tertiary)",
+              fontWeight: pn === page ? 600 : 400,
+            }}
+            onMouseEnter={(e) => {
+              if (pn !== page) e.currentTarget.style.background = "var(--bg-secondary)";
+            }}
+            onMouseLeave={(e) => {
+              if (pn !== page) e.currentTarget.style.background = "transparent";
+            }}
           >
             {pn + 1}
           </button>
@@ -69,12 +66,10 @@ export default function Pagination({ page, totalPages, onPageChange }) {
         {page < totalPages - 1 && (
           <button
             onClick={() => onPageChange(page + 1)}
-            className="flex items-center gap-1 px-4 py-2 text-sm text-[#1a73e8] hover:underline"
+            className="flex items-center gap-1.5 px-3 py-2 transition-opacity hover:opacity-60"
+            style={{ color: "var(--accent)" }}
           >
-            Next
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
+            next →
           </button>
         )}
       </div>
