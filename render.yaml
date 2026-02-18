@@ -1,0 +1,45 @@
+# ═══════════════════════════════════════════════════════════════
+#  Render.com — Blueprint Deployment Spec
+#  Deploy: Connect GitHub repo → Render auto-detects this file
+# ═══════════════════════════════════════════════════════════════
+
+databases:
+  - name: searchengine-db
+    plan: free
+    databaseName: searchengine
+    user: searchuser
+
+services:
+  - type: web
+    name: seek-search-engine
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: SPRING_PROFILE
+        value: prod
+      - key: DB_HOST
+        fromDatabase:
+          name: searchengine-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: searchengine-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: searchengine-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: searchengine-db
+          property: user
+      - key: DB_PASS
+        fromDatabase:
+          name: searchengine-db
+          property: password
+      - key: REDIS_HOST
+        value: localhost
+      - key: REDIS_PORT
+        value: 6379
+    healthCheckPath: /api/health

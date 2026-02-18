@@ -1,6 +1,8 @@
 import axios from "axios";
 
-const BASE = import.meta.env.VITE_API_URL || "http://localhost:8080/api";
+// In production (served from Spring Boot), API is on same origin at /api
+// In development (Vite dev server), proxy handles it OR use VITE_API_URL
+const BASE = import.meta.env.VITE_API_URL || "/api";
 
 const api = axios.create({
   baseURL: BASE,

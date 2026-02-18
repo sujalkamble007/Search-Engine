@@ -1,0 +1,29 @@
+# Build outputs
+build/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Git
+.git/
+.gitignore
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docs
+README.md
+LICENSE
+HELP.md
+*.md
+
+# Local configs
+*.log
+*.env
+.env.*
