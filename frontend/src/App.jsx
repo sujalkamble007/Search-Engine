@@ -78,9 +78,10 @@ export default function App() {
   // ─── Theme Toggle Button ───
   const ThemeToggle = ({ className = "" }) => (
     <button
-      onClick={toggleTheme}
+      onClick={(e) => { e.stopPropagation(); toggleTheme(); }}
       className={`w-8 h-8 rounded-full flex items-center justify-center
         hover:opacity-70 transition-opacity ${className}`}
+      style={{ color: "var(--text-secondary)", cursor: "pointer", position: "relative", zIndex: 10 }}
       title={theme === "dark" ? "Switch to light" : "Switch to dark"}
     >
       {theme === "dark" ? (
@@ -118,22 +119,18 @@ export default function App() {
         style={{ background: "var(--bg-primary)" }}
       >
         {/* Top bar */}
-        <nav className="flex justify-end items-center gap-2 px-6 py-4">
+        <nav className="flex justify-end items-center gap-2 px-6 py-4" style={{ position: "relative", zIndex: 10 }}>
           <button
             onClick={() => { setShowSettings(true); setSettingsView("crawler"); }}
-            className="text-[13px] font-mono px-3 py-1.5 rounded-md transition-colors"
-            style={{ color: "var(--text-secondary)" }}
-            onMouseEnter={(e) => e.target.style.background = "var(--bg-secondary)"}
-            onMouseLeave={(e) => e.target.style.background = "transparent"}
+            className="text-[13px] font-mono px-3 py-1.5 rounded-md transition-colors hover:bg-black/5"
+            style={{ color: "var(--text-secondary)", cursor: "pointer" }}
           >
             index
           </button>
           <button
             onClick={() => { setShowSettings(true); setSettingsView("analytics"); }}
-            className="text-[13px] font-mono px-3 py-1.5 rounded-md transition-colors"
-            style={{ color: "var(--text-secondary)" }}
-            onMouseEnter={(e) => e.target.style.background = "var(--bg-secondary)"}
-            onMouseLeave={(e) => e.target.style.background = "transparent"}
+            className="text-[13px] font-mono px-3 py-1.5 rounded-md transition-colors hover:bg-black/5"
+            style={{ color: "var(--text-secondary)", cursor: "pointer" }}
           >
             analytics
           </button>
@@ -250,13 +247,11 @@ export default function App() {
           <div className="flex-1 max-w-xl">
             <SearchBar onSearch={handleSearch} initialQuery={query} isHome={false} />
           </div>
-          <div className="flex items-center gap-1 flex-shrink-0">
+          <div className="flex items-center gap-1 flex-shrink-0" style={{ position: "relative", zIndex: 10 }}>
             <button
               onClick={() => { setShowSettings(true); setSettingsView("analytics"); }}
-              className="p-2 rounded-md transition-colors"
+              className="p-2 rounded-md transition-colors hover:bg-black/5"
               title="Analytics"
-              onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-secondary)"}
-              onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
             >
               <svg className="w-[18px] h-[18px]" style={{ color: "var(--text-tertiary)" }} fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
                 <path d="M3 3v18h18M7 16v-3M11 16V9M15 16v-5M19 16V7" strokeLinecap="round" />
@@ -264,10 +259,8 @@ export default function App() {
             </button>
             <button
               onClick={() => { setShowSettings(true); setSettingsView("crawler"); }}
-              className="p-2 rounded-md transition-colors"
+              className="p-2 rounded-md transition-colors hover:bg-black/5"
               title="Index Pages"
-              onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-secondary)"}
-              onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
             >
               <svg className="w-[18px] h-[18px]" style={{ color: "var(--text-tertiary)" }} fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
                 <path d="M12 4v16m-8-8h16" strokeLinecap="round" />
